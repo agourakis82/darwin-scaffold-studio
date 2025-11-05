@@ -3,8 +3,8 @@ message: "If you use this software, please cite it as below."
 title: "Darwin Scaffold Studio: Q1-Level MicroCT and SEM Analysis Platform"
 version: 1.0.0
 date-released: 2025-11-05
-doi: 10.5281/zenodo.XXXXXX
-repository-code: "https://github.com/agourakis82/kec-biomaterials-scaffolds"
+doi: 10.5281/zenodo.17535484
+repository-code: "https://github.com/agourakis82/darwin-scaffold-studio"
 url: "https://studio.agourakis.med.br"
 license: MIT
 type: software
