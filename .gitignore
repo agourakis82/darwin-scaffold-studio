@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# Data (large files)
+data/biomaterials/microct/raw/*.tif
+data/biomaterials/sem/raw/*.tif
+*.nii
+*.nii.gz
+*.dcm
+
+# Temporary
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Streamlit
+.streamlit/
+
+# Results
+results/
+outputs/
+*.png
+*.jpg
+*.stl
+!presentation/**/*.png
+!presentation/**/*.jpg
+

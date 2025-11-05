@@ -1,0 +1,56 @@
+{
+  "title": "Darwin Scaffold Studio: Q1-Level MicroCT and SEM Analysis Platform",
+  "description": "Production-ready software for scaffold morphological analysis, parametric optimization, and mechanical properties prediction. Features include: (1) MicroCT and SEM image processing with Q1-validated metrics, (2) Interactive 3D visualization with Plotly, (3) Parametric scaffold optimization based on literature targets, (4) Mechanical properties prediction using Gibson-Ashby relations, (5) Cell viability analysis, (6) STL export for 3D printing. Validated against Murphy et al. 2010 (Biomaterials), Karageorgiou & Kaplan 2005, and Gibson & Ashby 1997. Includes landing page, documentation upload system, and Cloudflare Tunnel deployment for public access.",
+  "creators": [
+    {
+      "name": "Agourakis, Demetrios Chiuratto",
+      "affiliation": "Pontifícia Universidade Católica do Rio Grande do Sul (PUCRS)",
+      "orcid": ""
+    }
+  ],
+  "license": {
+    "id": "MIT"
+  },
+  "keywords": [
+    "tissue engineering",
+    "scaffold analysis",
+    "microCT",
+    "scanning electron microscopy",
+    "SEM",
+    "biomaterials",
+    "Q1 validation",
+    "parametric optimization",
+    "Gibson-Ashby",
+    "3D reconstruction",
+    "mechanical properties",
+    "cell viability",
+    "porosity",
+    "interconnectivity",
+    "pore size distribution",
+    "tortuosity",
+    "scientific software",
+    "reproducible research"
+  ],
+  "upload_type": "software",
+  "access_right": "open",
+  "language": "eng",
+  "related_identifiers": [
+    {
+      "identifier": "10.1016/j.biomaterials.2010.02.012",
+      "relation": "cites",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    }
+  ],
+  "communities": [
+    {
+      "identifier": "zenodo"
+    }
+  ],
+  "grants": [],
+  "references": [
+    "Murphy CM, Haugh MG, O'Brien FJ. The effect of mean pore size on cell attachment, proliferation and migration in collagen-glycosaminoglycan scaffolds for bone tissue engineering. Biomaterials. 2010;31(3):461-466.",
+    "Karageorgiou V, Kaplan D. Porosity of 3D biomaterial scaffolds and osteogenesis. Biomaterials. 2005;26(27):5474-5491.",
+    "Gibson LJ, Ashby MF. Cellular Solids: Structure and Properties. 2nd ed. Cambridge University Press; 1997."
+  ]
+}

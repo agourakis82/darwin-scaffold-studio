@@ -1,0 +1,88 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Darwin Scaffold Studio: Q1-Level MicroCT and SEM Analysis Platform"
+version: 1.0.0
+date-released: 2025-11-05
+doi: 10.5281/zenodo.XXXXXX
+repository-code: "https://github.com/agourakis82/kec-biomaterials-scaffolds"
+url: "https://studio.agourakis.med.br"
+license: MIT
+type: software
+
+authors:
+  - family-names: "Agourakis"
+    given-names: "Demetrios Chiuratto"
+    email: "agourakis82@example.com"
+    affiliation: "Pontifícia Universidade Católica do Rio Grande do Sul (PUCRS)"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+
+abstract: >
+  Darwin Scaffold Studio is a production-ready software platform for
+  Q1-level analysis of tissue engineering scaffolds from MicroCT and SEM
+  imaging. Features include morphological analysis validated against
+  Murphy et al. 2010 and Karageorgiou & Kaplan 2005, parametric
+  optimization, 3D interactive visualization, mechanical properties
+  prediction using Gibson-Ashby relations, cell viability analysis, and
+  STL export for 3D printing. The software implements rigorous scientific
+  standards for reproducible research and is designed for publication in
+  Q1 journals (Nature, Biomaterials, Advanced Materials).
+
+keywords:
+  - tissue engineering
+  - scaffold analysis
+  - microCT
+  - scanning electron microscopy
+  - biomaterials
+  - Q1 validation
+  - parametric optimization
+  - 3D reconstruction
+  - mechanical properties
+  - Gibson-Ashby
+  - cell viability
+  - reproducible research
+
+references:
+  - type: article
+    authors:
+      - family-names: "Murphy"
+        given-names: "Ciara M."
+      - family-names: "Haugh"
+        given-names: "Matthew G."
+      - family-names: "O'Brien"
+        given-names: "Fergal J."
+    title: "The effect of mean pore size on cell attachment, proliferation and migration in collagen-glycosaminoglycan scaffolds for bone tissue engineering"
+    journal: "Biomaterials"
+    year: 2010
+    volume: 31
+    issue: 3
+    start: 461
+    end: 466
+    doi: "10.1016/j.biomaterials.2010.02.012"
+    
+  - type: article
+    authors:
+      - family-names: "Karageorgiou"
+        given-names: "Vassilis"
+      - family-names: "Kaplan"
+        given-names: "David"
+    title: "Porosity of 3D biomaterial scaffolds and osteogenesis"
+    journal: "Biomaterials"
+    year: 2005
+    volume: 26
+    issue: 27
+    start: 5474
+    end: 5491
+    doi: "10.1016/j.biomaterials.2005.02.002"
+    
+  - type: book
+    authors:
+      - family-names: "Gibson"
+        given-names: "Lorna J."
+      - family-names: "Ashby"
+        given-names: "Michael F."
+    title: "Cellular Solids: Structure and Properties"
+    edition: "2nd"
+    year: 1997
+    publisher:
+      name: "Cambridge University Press"
+    isbn: "978-0521499118"

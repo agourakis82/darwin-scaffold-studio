@@ -1,0 +1,39 @@
+tunnel: darwin-presentation
+credentials-file: /home/agourakis82/.cloudflared/darwin-presentation.json
+
+ingress:
+  # Landing page (main entry point)
+  - hostname: studio.agourakis.med.br
+    service: http://localhost:8700
+  
+  # Main presentation site
+  - hostname: project.agourakis.med.br
+    service: http://localhost:9000
+  
+  # Dashboard 1: Ultra Epic
+  - hostname: dashboard1.agourakis.med.br
+    service: http://localhost:8501
+  
+  # Dashboard 2: 3D Analysis
+  - hostname: dashboard2.agourakis.med.br
+    service: http://localhost:8502
+  
+  # Dashboard 3: Statistical
+  - hostname: dashboard3.agourakis.med.br
+    service: http://localhost:8503
+  
+  # Slides (Reveal.js)
+  - hostname: slides.agourakis.med.br
+    service: http://localhost:8100
+  
+  # Scaffold Studio App (Production Software)
+  - hostname: studio.agourakis.med.br
+    path: /app
+    service: http://localhost:8600
+  
+  # Files & Documentation Upload
+  - hostname: files.agourakis.med.br
+    service: http://localhost:8800
+  
+  # Catch-all
+  - service: http_status:404
