@@ -24,8 +24,10 @@ Interactive 3D Scaffold Editor with Real-time Q1 Validation.
 """
 module ScaffoldEditor
 
-using ..Types: ScaffoldMetrics, ScaffoldParameters
-using ..Config: ScaffoldConfig, get_config
+# Import from DarwinScaffoldStudio's submodules (Interactive is inside DarwinScaffoldStudio)
+# ScaffoldEditor -> Interactive -> DarwinScaffoldStudio -> Types
+using ...Types: ScaffoldMetrics, ScaffoldParameters
+using ...Config: ScaffoldConfig, get_config
 using LinearAlgebra
 using Statistics
 using Dates
@@ -404,49 +406,49 @@ function generate_scaffold(dims::Tuple{Int,Int,Int},
         end
 
     elseif method == :gyroid
-        # Gyroid TPMS surface
+        # Gyroid TPMS: f(x,y,z) = sin(x)cos(y) + sin(y)cos(z) + sin(z)cos(x)
+        # Range: approximately [-1.5, 1.5]
+        # Solid where f > t (isovalue threshold)
+        values = zeros(Float64, dims)
         for i in 1:dims[1], j in 1:dims[2], k in 1:dims[3]
             x = 2π * i / dims[1]
             y = 2π * j / dims[2]
             z = 2π * k / dims[3]
-
-            # Gyroid equation: sin(x)cos(y) + sin(y)cos(z) + sin(z)cos(x) = t
-            gyroid = sin(x)*cos(y) + sin(y)*cos(z) + sin(z)*cos(x)
-
-            # Threshold to achieve target porosity
-            t = quantile_threshold_for_porosity(porosity)
-            volume[i,j,k] = abs(gyroid) < t
+            values[i,j,k] = sin(x)*cos(y) + sin(y)*cos(z) + sin(z)*cos(x)
         end
+        t = compute_threshold_for_porosity(values, porosity)
+        volume .= values .> t
 
     elseif method == :diamond
-        # Diamond TPMS surface
+        # Diamond TPMS: f = cos(x)cos(y)cos(z) - sin(x)sin(y)sin(z)
+        # Range: approximately [-1, 1]
+        values = zeros(Float64, dims)
         for i in 1:dims[1], j in 1:dims[2], k in 1:dims[3]
             x = 2π * i / dims[1]
             y = 2π * j / dims[2]
             z = 2π * k / dims[3]
-
-            # Diamond equation
-            diamond = cos(x)*cos(y)*cos(z) - sin(x)*sin(y)*sin(z)
-            t = quantile_threshold_for_porosity(porosity)
-            volume[i,j,k] = abs(diamond) < t
+            values[i,j,k] = cos(x)*cos(y)*cos(z) - sin(x)*sin(y)*sin(z)
         end
+        t = compute_threshold_for_porosity(values, porosity)
+        volume .= values .> t
 
     elseif method == :primitive
-        # Schwarz P (Primitive) TPMS
+        # Schwarz P (Primitive): f = cos(x) + cos(y) + cos(z)
+        # Range: [-3, 3]
+        values = zeros(Float64, dims)
         for i in 1:dims[1], j in 1:dims[2], k in 1:dims[3]
             x = 2π * i / dims[1]
             y = 2π * j / dims[2]
             z = 2π * k / dims[3]
-
-            primitive = cos(x) + cos(y) + cos(z)
-            t = quantile_threshold_for_porosity(porosity)
-            volume[i,j,k] = abs(primitive) < t
+            values[i,j,k] = cos(x) + cos(y) + cos(z)
         end
+        t = compute_threshold_for_porosity(values, porosity)
+        volume .= values .> t
 
     elseif method == :lattice
         # Regular cubic lattice
-        strut_width = round(Int, (1.0 - porosity) * minimum(dims) / 10)
-        period = round(Int, pore_size_um / 10)  # Approximate
+        strut_width = max(1, round(Int, (1.0 - porosity) * minimum(dims) / 8))
+        period = max(strut_width + 2, round(Int, minimum(dims) / 4))
 
         for i in 1:dims[1], j in 1:dims[2], k in 1:dims[3]
             on_strut_x = (i % period) < strut_width
@@ -464,10 +466,16 @@ function generate_scaffold(dims::Tuple{Int,Int,Int},
     volume
 end
 
-function quantile_threshold_for_porosity(porosity::Float64)
-    # Empirical mapping for TPMS surfaces
-    # Porosity 0.5 → t ≈ 0.3, Porosity 0.8 → t ≈ 0.8
-    0.5 + (porosity - 0.5) * 1.5
+"""
+Compute threshold to achieve target porosity using quantile.
+Solid fraction = 1 - porosity, so we need that fraction of voxels above threshold.
+"""
+function compute_threshold_for_porosity(values::Array{Float64, 3}, porosity::Float64)
+    # We want (1-porosity) fraction of voxels to be solid (above threshold)
+    # So threshold should be at quantile = porosity
+    sorted_values = sort(vec(values))
+    idx = max(1, round(Int, porosity * length(sorted_values)))
+    sorted_values[idx]
 end
 
 #=============================================================================
@@ -560,7 +568,8 @@ function compute_distance_transform(mask::AbstractArray{Bool, 3})
 end
 
 function compute_interconnectivity(volume::Array{Bool, 3})
-    # Simplified: ratio of largest connected pore to total pore
+    # Ratio of largest connected pore component to total pore volume
+    # Uses flood-fill from boundary surfaces (more realistic for permeability)
     pore_mask = .!volume
     total_pore = sum(pore_mask)
 
@@ -568,12 +577,48 @@ function compute_interconnectivity(volume::Array{Bool, 3})
         return 0.0
     end
 
-    # Flood fill from center to find connected pore
     dims = size(volume)
-    center = (dims[1]÷2, dims[2]÷2, dims[3]÷2)
-
     visited = falses(dims)
-    stack = [center]
+
+    # Find seed points: pore voxels on any boundary face
+    seed_points = Tuple{Int,Int,Int}[]
+
+    # Top and bottom faces (z=1 and z=dims[3])
+    for i in 1:dims[1], j in 1:dims[2]
+        if pore_mask[i, j, 1]
+            push!(seed_points, (i, j, 1))
+        end
+        if pore_mask[i, j, dims[3]]
+            push!(seed_points, (i, j, dims[3]))
+        end
+    end
+
+    # Left and right faces (x=1 and x=dims[1])
+    for j in 1:dims[2], k in 1:dims[3]
+        if pore_mask[1, j, k]
+            push!(seed_points, (1, j, k))
+        end
+        if pore_mask[dims[1], j, k]
+            push!(seed_points, (dims[1], j, k))
+        end
+    end
+
+    # Front and back faces (y=1 and y=dims[2])
+    for i in 1:dims[1], k in 1:dims[3]
+        if pore_mask[i, 1, k]
+            push!(seed_points, (i, 1, k))
+        end
+        if pore_mask[i, dims[2], k]
+            push!(seed_points, (i, dims[2], k))
+        end
+    end
+
+    if isempty(seed_points)
+        return 0.0  # No pores on surfaces = closed porosity
+    end
+
+    # Flood fill from all boundary seed points
+    stack = copy(seed_points)
     connected = 0
 
     while !isempty(stack)
@@ -591,6 +636,7 @@ function compute_interconnectivity(volume::Array{Bool, 3})
         visited[i,j,k] = true
         connected += 1
 
+        # 6-connectivity for pore network
         push!(stack, (i+1,j,k))
         push!(stack, (i-1,j,k))
         push!(stack, (i,j+1,k))

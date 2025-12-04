@@ -56,6 +56,13 @@ include("DarwinScaffoldStudio/Agents/SynthesisAgent.jl")
 @safe_include "DarwinScaffoldStudio/Semantic/KnowledgeGraph.jl" "KnowledgeGraph"
 @safe_include "DarwinScaffoldStudio/Semantic/EpistemicAgents.jl" "EpistemicAgents"
 
+# INTERACTIVE: ScaffoldEditor with Q1 Literature Validation
+@info "Loading Interactive layer (ScaffoldEditor)..."
+module Interactive
+    # ScaffoldEditor will import Types and Config directly via ... prefix
+    include("DarwinScaffoldStudio/Interactive/ScaffoldEditor.jl")
+end
+
 # FRONTIER: Advanced AI Modules (Optional but recommended)
 if SYSTEM_CONFIG.enable_frontier_ai
     @info "Loading FRONTIER AI modules (PINNs, TDA, GNN)..."
