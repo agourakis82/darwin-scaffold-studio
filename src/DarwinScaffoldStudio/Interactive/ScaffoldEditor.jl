@@ -116,11 +116,17 @@ const Q1_LITERATURE = Dict{String, NamedTuple}(
 )
 
 """
-Material database with mechanical properties.
+Material database with mechanical properties and OBO Foundry annotations.
+
+OBO References:
+- CHEBI: Chemical Entities of Biological Interest
+- CAS: Chemical Abstracts Service Registry Number
 """
 const MATERIAL_DATABASE = Dict{String, NamedTuple}(
     "PCL" => (
         name = "Poly(ε-caprolactone)",
+        chebi_id = "CHEBI:53310",
+        cas = "24980-41-4",
         E_solid_MPa = 400.0,
         σ_solid_MPa = 25.0,
         ρ_solid_kg_m3 = 1145.0,
@@ -130,6 +136,8 @@ const MATERIAL_DATABASE = Dict{String, NamedTuple}(
     ),
     "PLA" => (
         name = "Poly(lactic acid)",
+        chebi_id = "CHEBI:53309",
+        cas = "26100-51-6",
         E_solid_MPa = 3500.0,
         σ_solid_MPa = 55.0,
         ρ_solid_kg_m3 = 1240.0,
@@ -139,6 +147,8 @@ const MATERIAL_DATABASE = Dict{String, NamedTuple}(
     ),
     "PLGA" => (
         name = "Poly(lactic-co-glycolic acid)",
+        chebi_id = "CHEBI:53426",
+        cas = "26780-50-7",
         E_solid_MPa = 2000.0,
         σ_solid_MPa = 45.0,
         ρ_solid_kg_m3 = 1300.0,
@@ -148,6 +158,8 @@ const MATERIAL_DATABASE = Dict{String, NamedTuple}(
     ),
     "Collagen" => (
         name = "Type I Collagen",
+        chebi_id = "CHEBI:3815",
+        cas = "9007-34-5",
         E_solid_MPa = 5.0,
         σ_solid_MPa = 1.0,
         ρ_solid_kg_m3 = 1350.0,
@@ -157,6 +169,8 @@ const MATERIAL_DATABASE = Dict{String, NamedTuple}(
     ),
     "Hydrogel_PEG" => (
         name = "PEG Hydrogel",
+        chebi_id = "CHEBI:46793",
+        cas = "25322-68-3",
         E_solid_MPa = 0.1,
         σ_solid_MPa = 0.05,
         ρ_solid_kg_m3 = 1050.0,
@@ -166,6 +180,8 @@ const MATERIAL_DATABASE = Dict{String, NamedTuple}(
     ),
     "HA_TCP" => (
         name = "Hydroxyapatite/TCP Ceramic",
+        chebi_id = "CHEBI:52251",  # Hydroxyapatite
+        cas = "1306-06-5",
         E_solid_MPa = 15000.0,
         σ_solid_MPa = 40.0,
         ρ_solid_kg_m3 = 3150.0,
@@ -175,6 +191,8 @@ const MATERIAL_DATABASE = Dict{String, NamedTuple}(
     ),
     "Ti6Al4V" => (
         name = "Titanium Alloy",
+        chebi_id = "CHEBI:33341",  # Titanium
+        cas = "7440-32-6",
         E_solid_MPa = 110000.0,
         σ_solid_MPa = 900.0,
         ρ_solid_kg_m3 = 4430.0,
@@ -184,12 +202,124 @@ const MATERIAL_DATABASE = Dict{String, NamedTuple}(
     ),
     "BioactiveGlass_45S5" => (
         name = "Bioglass 45S5",
+        chebi_id = "CHEBI:52254",
+        cas = nothing,  # Composite material
         E_solid_MPa = 35000.0,
         σ_solid_MPa = 42.0,
         ρ_solid_kg_m3 = 2700.0,
         degradation_months = (6, 24),
         biocompatibility = :excellent,
         fda_approved = true
+    ),
+    # Additional materials with OBO annotations
+    "Chitosan" => (
+        name = "Chitosan",
+        chebi_id = "CHEBI:16737",
+        cas = "9012-76-4",
+        E_solid_MPa = 2.0,
+        σ_solid_MPa = 0.5,
+        ρ_solid_kg_m3 = 1400.0,
+        degradation_months = (3, 12),
+        biocompatibility = :excellent,
+        fda_approved = true
+    ),
+    "Alginate" => (
+        name = "Alginate",
+        chebi_id = "CHEBI:52747",
+        cas = "9005-38-3",
+        E_solid_MPa = 0.05,
+        σ_solid_MPa = 0.02,
+        ρ_solid_kg_m3 = 1600.0,
+        degradation_months = (1, 6),
+        biocompatibility = :excellent,
+        fda_approved = true
+    ),
+    "Fibrin" => (
+        name = "Fibrin",
+        chebi_id = "CHEBI:18237",
+        cas = "9001-31-4",
+        E_solid_MPa = 0.02,
+        σ_solid_MPa = 0.01,
+        ρ_solid_kg_m3 = 1100.0,
+        degradation_months = (0.5, 2),
+        biocompatibility = :excellent,
+        fda_approved = true
+    ),
+    "HyaluronicAcid" => (
+        name = "Hyaluronic Acid",
+        chebi_id = "CHEBI:18154",
+        cas = "9004-61-9",
+        E_solid_MPa = 0.01,
+        σ_solid_MPa = 0.005,
+        ρ_solid_kg_m3 = 1200.0,
+        degradation_months = (0.25, 3),
+        biocompatibility = :excellent,
+        fda_approved = true
+    ),
+    "Gelatin" => (
+        name = "Gelatin (Methacrylated)",
+        chebi_id = "CHEBI:28512",
+        cas = "9000-70-8",
+        E_solid_MPa = 0.1,
+        σ_solid_MPa = 0.05,
+        ρ_solid_kg_m3 = 1300.0,
+        degradation_months = (1, 6),
+        biocompatibility = :excellent,
+        fda_approved = true
+    )
+)
+
+"""
+Tissue target mapping to OBO UBERON terms.
+"""
+const TISSUE_OBO_MAP = Dict{Symbol, NamedTuple}(
+    :bone => (
+        uberon_id = "UBERON:0002481",
+        name = "bone tissue",
+        cell_types = ["CL:0000062", "CL:0000137", "CL:0000222"],  # osteoblast, osteocyte, MSC
+        go_processes = ["GO:0001503", "GO:0030282"]  # ossification, bone mineralization
+    ),
+    :cartilage => (
+        uberon_id = "UBERON:0002418",
+        name = "cartilage tissue",
+        cell_types = ["CL:0000138", "CL:0000222"],  # chondrocyte, MSC
+        go_processes = ["GO:0051216"]  # cartilage development
+    ),
+    :skin => (
+        uberon_id = "UBERON:0002097",
+        name = "skin of body",
+        cell_types = ["CL:0000312", "CL:0000057"],  # keratinocyte, fibroblast
+        go_processes = ["GO:0042060"]  # wound healing
+    ),
+    :neural => (
+        uberon_id = "UBERON:0001017",
+        name = "central nervous system",
+        cell_types = ["CL:0000540", "CL:0000127", "CL:0002573"],  # neuron, astrocyte, Schwann
+        go_processes = []
+    ),
+    :vascular => (
+        uberon_id = "UBERON:0001981",
+        name = "blood vessel",
+        cell_types = ["CL:0000115", "CL:0000192"],  # endothelial, smooth muscle
+        go_processes = ["GO:0001525"]  # angiogenesis
+    ),
+    :cardiac => (
+        uberon_id = "UBERON:0001133",
+        name = "cardiac muscle tissue",
+        cell_types = ["CL:0000746"],  # cardiomyocyte
+        go_processes = []
+    ),
+    :tendon => (
+        uberon_id = "UBERON:0006590",
+        name = "tendon",
+        cell_types = ["CL:0000057"],  # fibroblast
+        go_processes = ["GO:0030198"]  # ECM organization
+    ),
+    :liver => (
+        uberon_id = "UBERON:0002107",
+        name = "liver",
+        cell_types = [],
+        go_processes = []
     )
 )
 

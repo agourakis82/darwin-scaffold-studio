@@ -56,6 +56,11 @@ include("DarwinScaffoldStudio/Agents/SynthesisAgent.jl")
 @safe_include "DarwinScaffoldStudio/Semantic/KnowledgeGraph.jl" "KnowledgeGraph"
 @safe_include "DarwinScaffoldStudio/Semantic/EpistemicAgents.jl" "EpistemicAgents"
 
+# OBO FOUNDRY INTEGRATION: Standard biomedical ontologies
+# UBERON (anatomy), CL (cells), CHEBI (chemicals), GO (processes), NCIT (diseases)
+@info "Loading OBO Foundry integration (UBERON, CL, CHEBI, GO, NCIT, BTO)..."
+include("DarwinScaffoldStudio/Ontology/OBOFoundry.jl")
+
 # INTERACTIVE: ScaffoldEditor with Q1 Literature Validation
 @info "Loading Interactive layer (ScaffoldEditor)..."
 module Interactive
