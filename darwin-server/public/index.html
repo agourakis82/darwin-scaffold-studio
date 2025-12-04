@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darwin Scaffold Studio</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">🧬 Darwin Scaffold Studio</div>
+            <div class="slogan">Rigorous science. Honest results. Real impact.</div>
+        </header>
+
+        <main>
+            <!-- STAGE 1: UPLOAD -->
+            <section id="stage-upload" class="stage active">
+                <div class="card glass">
+                    <h2>📤 Upload Scaffold Data</h2>
+                    <p>Upload MicroCT (TIFF stack) or SEM (2D image) for Q1-level analysis.</p>
+
+                    <div class="upload-zone" id="drop-zone">
+                        <div class="icon">📁</div>
+                        <h3>Drag & Drop or Click to Upload</h3>
+                        <p>.tif, .tiff, .png supported</p>
+                        <input type="file" id="file-input" hidden>
+                    </div>
+
+                    <div class="settings">
+                        <div class="input-group">
+                            <label>Voxel Size (μm)</label>
+                            <input type="number" id="voxel-size" value="10.391" step="0.1">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STAGE 2: ANALYZE -->
+            <section id="stage-analyze" class="stage hidden">
+                <div class="card glass">
+                    <h2>🔬 Analysis Results</h2>
+                    <div class="metrics-grid" id="analysis-results">
+                        <!-- Basic Metrics -->
+                        <div class="metric-card">
+                            <h3>Porosity</h3>
+                            <p class="metric-value" id="res-porosity">--%</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Pore Size</h3>
+                            <p class="metric-value" id="res-pore-size">-- µm</p>
+                        </div>
+
+                        <!-- Thesis Metrics: KEC -->
+                        <div class="metric-card highlight">
+                            <h3>Curvature (K)</h3>
+                            <p class="metric-value" id="res-curvature">--</p>
+                            <span class="metric-label">Cell Adhesion</span>
+                        </div>
+                        <div class="metric-card highlight">
+                            <h3>Entropy (E)</h3>
+                            <p class="metric-value" id="res-entropy">--</p>
+                            <span class="metric-label">Complexity</span>
+                        </div>
+
+                        <!-- Thesis Metrics: Percolation/ML -->
+                        <div class="metric-card highlight">
+                            <h3>Percolation (P)</h3>
+                            <p class="metric-value" id="res-percolation">-- µm</p>
+                            <span class="metric-label">Navigability</span>
+                        </div>
+                        <div class="metric-card ai-metric">
+                            <h3>AI Viability</h3>
+                            <p class="metric-value" id="res-viability">--</p>
+                            <span class="metric-label">Predicted Success</span>
+                        </div>
+                    </div>
+
+                    <div id="problems-list" class="problems-container"></div>
+
+                    <button class="btn-primary" onclick="goToStage('optimize')">Proceed to Optimization</button>
+                </div>
+            </section>
+
+            <!-- STAGE 3: OPTIMIZE -->
+            <section id="stage-optimize" class="stage hidden">
+                <div class="card glass">
+                    <h2>🔧 Parametric Optimization</h2>
+                    <div class="opt-controls">
+                        <div class="input-group">
+                            <label>Target Porosity (%)</label>
+                            <input type="range" id="opt-porosity" min="0.80" max="0.99" step="0.01" value="0.92">
+                            <span id="val-porosity">92%</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Target Pore Size (μm)</label>
+                            <input type="range" id="opt-pore-size" min="50" max="500" step="10" value="150">
+                            <span id="val-pore-size">150 μm</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Method</label>
+                            <select id="opt-method">
+                                <option value="freeze-casting">Freeze Casting (Aligned)</option>
+                                <option value="3d-bioprinting">3D Bioprinting (Grid)</option>
+                                <option value="salt-leaching">Salt Leaching (Random)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="runOptimization()">🚀 Generate Optimized Scaffold</button>
+                </div>
+            </section>
+
+            <!-- STAGE 4: RESULTS -->
+            <section id="stage-results" class="stage hidden">
+                <div class="card glass">
+                    <h2>🎉 Optimization Complete</h2>
+                    <div class="comparison-grid">
+                        <div class="metric-card">
+                            <h4>Original Porosity</h4>
+                            <div class="value" id="res-orig-porosity">-</div>
+                        </div>
+                        <div class="metric-card highlight">
+                            <h4>Optimized Porosity</h4>
+                            <div class="value" id="res-opt-porosity">-</div>
+                        </div>
+                    </div>
+
+                    <div id="3d-viewer" class="viewer-3d">
+                        <!-- Plotly 3D viewer -->
+                    </div>
+
+                    <a id="download-link" class="btn-primary" href="#" download>💾 Download STL</a>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>

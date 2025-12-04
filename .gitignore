@@ -47,3 +47,6 @@ outputs/
 !presentation/**/*.png
 !presentation/**/*.jpg
 
+darwin-server/target/
+*.pyc
+__pycache__/

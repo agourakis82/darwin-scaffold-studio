@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darwin Research Hub - AI Agents</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Agent-specific styles */
+        .research-hub {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            grid-template-rows: auto 1fr;
+            gap: 1rem;
+            height: 100vh;
+            padding: 1rem;
+        }
+
+        .hub-header {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 1rem;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2));
+            border-radius: 12px;
+        }
+
+        .main-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .agent-chat {
+            background: rgba(17, 24, 39, 0.8);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .message.user {
+            background: rgba(59, 130, 246, 0.2);
+            margin-left: 2rem;
+            text-align: right;
+        }
+
+        .message.agent {
+            background: rgba(139, 92, 246, 0.2);
+            margin-right: 2rem;
+        }
+
+        .message.system {
+            background: rgba(16, 185, 129, 0.2);
+            text-align: center;
+            font-style: italic;
+        }
+
+        .message-header {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .agent-selector {
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .send-btn {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(139, 92, 246, 0.4);
+        }
+
+        .viewer-panel {
+            background: rgba(17, 24, 39, 0.8);
+            border-radius: 12px;
+            padding: 1.5rem;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-indicator.connected {
+            background: #10b981;
+        }
+
+        .status-indicator.disconnected {
+            background: #ef4444;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="research-hub">
+        <div class="hub-header">
+            <h1>🧬 Darwin Research Hub</h1>
+            <p>Multi-Agent AI System for Scaffold Analysis</p>
+            <span class="status-indicator disconnected" id="ws-status"></span>
+            <span id="status-text">Connecting...</span>
+        </div>
+
+        <div class="main-panel">
+            <!-- Agent Chat -->
+            <div class="agent-chat">
+                <h2>💬 Agent Chat</h2>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message system">
+                        <p>Initializing Darwin agents...</p>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <select class="agent-selector" id="agent-select">
+                        <option value="design">🎨 Design Agent</option>
+                        <option value="analysis">🔬 Analysis Agent</option>
+                        <option value="synthesis">📚 Synthesis Agent</option>
+                    </select>
+                    <input type="text" class="chat-input" id="chat-input" placeholder="Ask an agent...">
+                    <button class="send-btn" id="send-btn">Send</button>
+                </div>
+            </div>
+
+            <!-- 3D Viewer Placeholder -->
+            <div class="viewer-panel" id="viewer">
+                <p>3D Scaffold Viewer (WebGPU)<br>Scaffold will appear here when generated</p>
+            </div>
+        </div>
+
+        <!-- Metrics Sidebar -->
+        <div class="agent-chat" style="grid-row: 2;">
+            <h2>📊 Live Metrics</h2>
+            <div id="metrics-display" style="overflow-y: auto;">
+                <p style="color: rgba(255,255,255,0.5);">Metrics will appear after analysis...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="agent-client.js"></script>
+</body>
+
+</html>

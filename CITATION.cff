@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "Darwin Scaffold Studio: Q1-Level MicroCT and SEM Analysis Platform"
-version: 1.0.0
-date-released: 2025-11-05
+title: "Darwin Scaffold Studio: Q1-Level MicroCT and SEM Analysis Platform with Topological Data Analysis"
+version: 1.1.0
+date-released: 2025-11-08
 doi: 10.5281/zenodo.17535484
 repository-code: "https://github.com/agourakis82/darwin-scaffold-studio"
 url: "https://studio.agourakis.med.br"
@@ -12,20 +12,22 @@ type: software
 authors:
   - family-names: "Agourakis"
     given-names: "Demetrios Chiuratto"
-    email: "agourakis82@example.com"
-    affiliation: "Pontifícia Universidade Católica do Rio Grande do Sul (PUCRS)"
-    orcid: "https://orcid.org/0000-0000-0000-0000"
+    email: "demetrios@agourakis.med.br"
+    affiliation: "Pontifical Catholic University of São Paulo (PUC-SP); Faculdade São Leopoldo Mandic"
+    orcid: "https://orcid.org/0000-0002-8596-5097"
 
 abstract: >
-  Darwin Scaffold Studio is a production-ready software platform for
+  Darwin Scaffold Studio v1.1.0 is a production-ready software platform for
   Q1-level analysis of tissue engineering scaffolds from MicroCT and SEM
-  imaging. Features include morphological analysis validated against
-  Murphy et al. 2010 and Karageorgiou & Kaplan 2005, parametric
-  optimization, 3D interactive visualization, mechanical properties
-  prediction using Gibson-Ashby relations, cell viability analysis, and
-  STL export for 3D printing. The software implements rigorous scientific
-  standards for reproducible research and is designed for publication in
-  Q1 journals (Nature, Biomaterials, Advanced Materials).
+  imaging. NEW in v1.1.0: Integration of KEC 3.0 (Knowledge Exchange Coefficient)
+  with Persistent Homology for topological data analysis (TDA). Features include
+  morphological analysis validated against Murphy et al. 2010 and Karageorgiou &
+  Kaplan 2005, Betti numbers computation (β₀, β₁, β₂) using GUDHI and Ripser,
+  topological biomarkers for scaffold connectivity, parametric optimization,
+  3D interactive visualization, mechanical properties prediction using Gibson-Ashby
+  relations, cell viability analysis, and STL export for 3D printing. The software
+  implements rigorous scientific standards for reproducible research and is designed
+  for publication in Q1 journals (Nature Materials, Biomaterials, Advanced Materials).
 
 keywords:
   - tissue engineering
@@ -33,6 +35,10 @@ keywords:
   - microCT
   - scanning electron microscopy
   - biomaterials
+  - topological data analysis
+  - persistent homology
+  - betti numbers
+  - KEC 3.0
   - Q1 validation
   - parametric optimization
   - 3D reconstruction
@@ -58,7 +64,7 @@ references:
     start: 461
     end: 466
     doi: "10.1016/j.biomaterials.2010.02.012"
-    
+
   - type: article
     authors:
       - family-names: "Karageorgiou"
@@ -73,7 +79,7 @@ references:
     start: 5474
     end: 5491
     doi: "10.1016/j.biomaterials.2005.02.002"
-    
+
   - type: book
     authors:
       - family-names: "Gibson"

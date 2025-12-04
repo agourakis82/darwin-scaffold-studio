@@ -1,0 +1,193 @@
+:root {
+    --primary: #667eea;
+    --secondary: #764ba2;
+    --bg-dark: #0f2027;
+    --glass: rgba(255, 255, 255, 0.1);
+    --text: #ffffff;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+.app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.logo {
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(to right, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.slogan {
+    font-size: 1.2rem;
+    opacity: 0.8;
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+.card {
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 255, 136, 0.1);
+    transition: all 0.3s ease;
+}
+
+.metric-card.highlight {
+    border: 2px solid rgba(139, 92, 246, 0.5);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+}
+
+.metric-card.ai-metric {
+    border: 2px solid rgba(16, 185, 129, 0.5);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1));
+}
+
+.metric-label {
+    display: block;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 4px;
+}
+
+.problem-item {
+    background: rgba(239, 68, 68, 0.2);
+    border-left: 3px solid #ef4444;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 6px;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.upload-zone {
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 15px;
+    padding: 3rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-zone:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--primary);
+}
+
+.icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 1rem;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+}
+
+.hidden {
+    display: none;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1.5rem;
+    border-radius: 15px;
+    text-align: center;
+}
+
+.metric-card h4 {
+    margin: 0;
+    opacity: 0.7;
+    font-size: 0.9rem;
+}
+
+.metric-card .value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-top: 0.5rem;
+}
+
+.metric-card.pass .value {
+    color: #4caf50;
+}
+
+.metric-card.fail .value {
+    color: #f44336;
+}
+
+.input-group {
+    margin-bottom: 1.5rem;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+input[type="number"],
+select {
+    width: 100%;
+    padding: 0.8rem;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: white;
+    font-size: 1rem;
+}
+
+input[type="range"] {
+    width: 100%;
+}
+
+.viewer-3d {
+    height: 500px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 15px;
+    margin: 2rem 0;
+}
