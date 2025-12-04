@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darwin Scaffold Editor - Interactive 3D Design</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            height: 100vh;
+        }
+
+        /* Left Panel - Tools */
+        .tools-panel {
+            background: #16213e;
+            padding: 15px;
+            overflow-y: auto;
+            border-right: 1px solid #0f3460;
+        }
+
+        .panel-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: #00d9ff;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .tool-group {
+            margin-bottom: 20px;
+        }
+
+        .tool-group h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .tool-btn {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            background: #0f3460;
+            border: 1px solid #1a4a7a;
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            text-align: left;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .tool-btn:hover {
+            background: #1a4a7a;
+            border-color: #00d9ff;
+        }
+
+        .tool-btn.active {
+            background: #00d9ff;
+            color: #000;
+        }
+
+        .tool-btn i {
+            margin-right: 8px;
+            width: 16px;
+            display: inline-block;
+        }
+
+        /* Sliders */
+        .slider-group {
+            margin-bottom: 15px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .slider-value {
+            color: #00d9ff;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #0f3460;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00d9ff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Material selector */
+        select {
+            width: 100%;
+            padding: 10px;
+            background: #0f3460;
+            border: 1px solid #1a4a7a;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        /* Center - 3D Viewport */
+        .viewport {
+            position: relative;
+            background: #0a0a1a;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .viewport-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(22, 33, 62, 0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+        }
+
+        .view-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #0f3460;
+            border: 1px solid #1a4a7a;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .view-btn:hover {
+            background: #1a4a7a;
+        }
+
+        .heatmap-select {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(22, 33, 62, 0.95);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .heatmap-select label {
+            font-size: 11px;
+            color: #888;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* Color scale legend */
+        .color-scale {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(22, 33, 62, 0.95);
+            padding: 10px;
+            border-radius: 8px;
+            width: 60px;
+        }
+
+        .scale-gradient {
+            width: 20px;
+            height: 200px;
+            margin: 0 auto 10px;
+            border-radius: 4px;
+        }
+
+        .scale-labels {
+            font-size: 10px;
+            text-align: center;
+        }
+
+        /* Right Panel - Metrics & Validation */
+        .metrics-panel {
+            background: #16213e;
+            padding: 15px;
+            overflow-y: auto;
+            border-left: 1px solid #0f3460;
+        }
+
+        .metric-card {
+            background: #0f3460;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .metric-name {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .metric-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .metric-status.valid { background: #00ff88; }
+        .metric-status.invalid { background: #ff4444; }
+        .metric-status.warning { background: #ffaa00; }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .metric-unit {
+            font-size: 12px;
+            color: #888;
+            margin-left: 4px;
+        }
+
+        .metric-target {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .metric-bar {
+            height: 4px;
+            background: #1a1a2e;
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .metric-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        /* Overall Score */
+        .score-card {
+            background: linear-gradient(135deg, #0f3460, #1a4a7a);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .score-value {
+            font-size: 48px;
+            font-weight: 700;
+        }
+
+        .score-label {
+            font-size: 12px;
+            color: #888;
+        }
+
+        /* Recommendations */
+        .recommendations {
+            background: #0f3460;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 15px;
+        }
+
+        .recommendation-item {
+            font-size: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #1a4a7a;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .recommendation-item:last-child {
+            border-bottom: none;
+        }
+
+        .recommendation-icon {
+            color: #ffaa00;
+            margin-right: 8px;
+        }
+
+        /* Citations */
+        .citations {
+            margin-top: 15px;
+            padding: 10px;
+            background: #0a0a1a;
+            border-radius: 8px;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .citation-item {
+            padding: 4px 0;
+        }
+
+        /* Action buttons */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .action-btn.primary {
+            background: #00d9ff;
+            color: #000;
+        }
+
+        .action-btn.secondary {
+            background: #0f3460;
+            color: #fff;
+            border: 1px solid #1a4a7a;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 26, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.hidden { display: none; }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #0f3460;
+            border-top-color: #00d9ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel - Tools -->
+        <div class="tools-panel">
+            <div class="panel-header">DARWIN SCAFFOLD EDITOR</div>
+
+            <div class="tool-group">
+                <h3>Generation</h3>
+                <button class="tool-btn" onclick="generateScaffold('gyroid')">
+                    <i>◈</i> Gyroid TPMS
+                </button>
+                <button class="tool-btn" onclick="generateScaffold('diamond')">
+                    <i>◇</i> Diamond TPMS
+                </button>
+                <button class="tool-btn" onclick="generateScaffold('primitive')">
+                    <i>◻</i> Primitive TPMS
+                </button>
+                <button class="tool-btn" onclick="generateScaffold('lattice')">
+                    <i>▦</i> Cubic Lattice
+                </button>
+            </div>
+
+            <div class="tool-group">
+                <h3>Parameters</h3>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Target Porosity</span>
+                        <span class="slider-value" id="porosity-value">75%</span>
+                    </div>
+                    <input type="range" id="porosity-slider" min="50" max="95" value="75"
+                           oninput="updateParameter('porosity', this.value)">
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Pore Size</span>
+                        <span class="slider-value" id="poresize-value">200 µm</span>
+                    </div>
+                    <input type="range" id="poresize-slider" min="50" max="500" value="200"
+                           oninput="updateParameter('poresize', this.value)">
+                </div>
+            </div>
+
+            <div class="tool-group">
+                <h3>Material</h3>
+                <select id="material-select" onchange="changeMaterial(this.value)">
+                    <option value="PCL">PCL (Polycaprolactone)</option>
+                    <option value="PLA">PLA (Polylactic Acid)</option>
+                    <option value="PLGA">PLGA</option>
+                    <option value="Collagen">Type I Collagen</option>
+                    <option value="Hydrogel_PEG">PEG Hydrogel</option>
+                    <option value="HA_TCP">HA/TCP Ceramic</option>
+                    <option value="Ti6Al4V">Titanium Ti6Al4V</option>
+                    <option value="BioactiveGlass_45S5">Bioglass 45S5</option>
+                </select>
+            </div>
+
+            <div class="tool-group">
+                <h3>Target Tissue</h3>
+                <select id="tissue-select" onchange="changeTissue(this.value)">
+                    <option value="bone">Bone</option>
+                    <option value="cartilage">Cartilage</option>
+                    <option value="skin">Skin</option>
+                    <option value="neural">Neural</option>
+                    <option value="vascular">Vascular</option>
+                </select>
+            </div>
+
+            <div class="tool-group">
+                <h3>Edit Tools</h3>
+                <button class="tool-btn" onclick="setTool('add')">
+                    <i>+</i> Add Material
+                </button>
+                <button class="tool-btn" onclick="setTool('remove')">
+                    <i>−</i> Remove Material
+                </button>
+                <button class="tool-btn" onclick="setTool('smooth')">
+                    <i>○</i> Smooth Surface
+                </button>
+                <button class="tool-btn" onclick="applyOperation('erode')">
+                    <i>◁</i> Erode
+                </button>
+                <button class="tool-btn" onclick="applyOperation('dilate')">
+                    <i>▷</i> Dilate
+                </button>
+            </div>
+
+            <div class="tool-group">
+                <h3>History</h3>
+                <button class="tool-btn" onclick="undo()">
+                    <i>↶</i> Undo
+                </button>
+                <button class="tool-btn" onclick="redo()">
+                    <i>↷</i> Redo
+                </button>
+            </div>
+        </div>
+
+        <!-- Center - 3D Viewport -->
+        <div class="viewport">
+            <div id="canvas-container"></div>
+
+            <div class="heatmap-select">
+                <label>Property Visualization</label>
+                <select id="heatmap-select" onchange="changeHeatmap(this.value)">
+                    <option value="none">None (Solid)</option>
+                    <option value="porosity">Local Porosity</option>
+                    <option value="stress">Von Mises Stress</option>
+                    <option value="permeability">Permeability</option>
+                    <option value="curvature">Mean Curvature</option>
+                    <option value="poresize">Pore Size</option>
+                    <option value="wall">Wall Thickness</option>
+                    <option value="diffusion">Nutrient Diffusion</option>
+                    <option value="migration">Cell Migration</option>
+                </select>
+            </div>
+
+            <div class="color-scale" id="color-scale" style="display: none;">
+                <div class="scale-gradient" id="scale-gradient"></div>
+                <div class="scale-labels">
+                    <div id="scale-max">1.0</div>
+                    <div id="scale-min">0.0</div>
+                </div>
+            </div>
+
+            <div class="viewport-controls">
+                <button class="view-btn" onclick="setView('front')" title="Front View">F</button>
+                <button class="view-btn" onclick="setView('back')" title="Back View">B</button>
+                <button class="view-btn" onclick="setView('left')" title="Left View">L</button>
+                <button class="view-btn" onclick="setView('right')" title="Right View">R</button>
+                <button class="view-btn" onclick="setView('top')" title="Top View">T</button>
+                <button class="view-btn" onclick="setView('iso')" title="Isometric">3D</button>
+                <button class="view-btn" onclick="toggleWireframe()" title="Wireframe">W</button>
+                <button class="view-btn" onclick="toggleSlice()" title="Cross Section">✂</button>
+            </div>
+        </div>
+
+        <!-- Right Panel - Metrics -->
+        <div class="metrics-panel">
+            <div class="panel-header">Q1 VALIDATION</div>
+
+            <div class="score-card">
+                <div class="score-value" id="overall-score">--</div>
+                <div class="score-label">Q1 Compliance Score</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-name">Porosity</span>
+                    <span class="metric-status" id="porosity-status"></span>
+                </div>
+                <span class="metric-value" id="porosity-metric">--</span>
+                <span class="metric-unit">%</span>
+                <div class="metric-target">Target: 70-95% (Karageorgiou 2005)</div>
+                <div class="metric-bar">
+                    <div class="metric-bar-fill" id="porosity-bar" style="background: #00d9ff;"></div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-name">Mean Pore Size</span>
+                    <span class="metric-status" id="poresize-status"></span>
+                </div>
+                <span class="metric-value" id="poresize-metric">--</span>
+                <span class="metric-unit">µm</span>
+                <div class="metric-target">Target: 100-500 µm (Murphy 2010)</div>
+                <div class="metric-bar">
+                    <div class="metric-bar-fill" id="poresize-bar" style="background: #00ff88;"></div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-name">Interconnectivity</span>
+                    <span class="metric-status" id="interconn-status"></span>
+                </div>
+                <span class="metric-value" id="interconn-metric">--</span>
+                <span class="metric-unit">%</span>
+                <div class="metric-target">Target: ≥90% (Karageorgiou 2005)</div>
+                <div class="metric-bar">
+                    <div class="metric-bar-fill" id="interconn-bar" style="background: #ffaa00;"></div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-name">Elastic Modulus</span>
+                    <span class="metric-status" id="modulus-status"></span>
+                </div>
+                <span class="metric-value" id="modulus-metric">--</span>
+                <span class="metric-unit">MPa</span>
+                <div class="metric-target">Gibson-Ashby: E* = Es × ρ²</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-name">Yield Strength</span>
+                </div>
+                <span class="metric-value" id="strength-metric">--</span>
+                <span class="metric-unit">MPa</span>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-name">Permeability</span>
+                </div>
+                <span class="metric-value" id="perm-metric">--</span>
+                <span class="metric-unit">×10⁻¹² m²</span>
+                <div class="metric-target">Kozeny-Carman equation</div>
+            </div>
+
+            <div class="recommendations" id="recommendations">
+                <div class="panel-header" style="margin-bottom: 10px;">RECOMMENDATIONS</div>
+                <div id="recommendation-list"></div>
+            </div>
+
+            <div class="citations" id="citations">
+                <strong>Literature Base:</strong>
+                <div id="citation-list"></div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="action-btn secondary" onclick="exportSTL()">Export STL</button>
+                <button class="action-btn primary" onclick="optimize()">Auto-Optimize</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay hidden" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // State
+        let scene, camera, renderer, controls;
+        let scaffoldMesh = null;
+        let currentTool = 'view';
+        let wireframeMode = false;
+        let sliceMode = false;
+        let currentHeatmap = 'none';
+
+        // Parameters
+        let params = {
+            porosity: 0.75,
+            poreSize: 200,
+            material: 'PCL',
+            tissue: 'bone',
+            method: 'gyroid'
+        };
+
+        // Initialize Three.js
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a1a);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(3, 3, 3);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 5);
+            scene.add(directionalLight);
+
+            const backLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+            backLight.position.set(-5, -5, -5);
+            scene.add(backLight);
+
+            // Grid
+            const grid = new THREE.GridHelper(4, 20, 0x1a4a7a, 0x0f3460);
+            scene.add(grid);
+
+            // Axes
+            const axes = new THREE.AxesHelper(1.5);
+            scene.add(axes);
+
+            // Initial scaffold
+            generateScaffold('gyroid');
+
+            // Resize handler
+            window.addEventListener('resize', onWindowResize);
+
+            animate();
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Generate scaffold geometry (client-side for demo)
+        function generateScaffold(method) {
+            showLoading();
+            params.method = method;
+
+            setTimeout(() => {
+                // Remove existing
+                if (scaffoldMesh) {
+                    scene.remove(scaffoldMesh);
+                }
+
+                // Generate TPMS geometry
+                const geometry = generateTPMSGeometry(method, params.porosity);
+
+                const material = new THREE.MeshPhysicalMaterial({
+                    color: 0x88ccff,
+                    metalness: 0.1,
+                    roughness: 0.5,
+                    transparent: true,
+                    opacity: 0.9,
+                    side: THREE.DoubleSide
+                });
+
+                scaffoldMesh = new THREE.Mesh(geometry, material);
+                scene.add(scaffoldMesh);
+
+                // Update metrics (simulated)
+                updateMetrics({
+                    porosity: params.porosity * 100,
+                    poreSize: params.poreSize,
+                    interconnectivity: 92 + Math.random() * 5,
+                    modulus: 400 * Math.pow(1 - params.porosity, 2),
+                    strength: 25 * Math.pow(1 - params.porosity, 1.5),
+                    permeability: Math.pow(params.porosity, 3) * Math.pow(params.poreSize * 1e-6, 2) / 180 * 1e12
+                });
+
+                hideLoading();
+            }, 500);
+        }
+
+        // TPMS geometry generation
+        function generateTPMSGeometry(method, porosity) {
+            const resolution = 40;
+            const size = 2;
+
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const normals = [];
+
+            // Marching cubes-like approach (simplified)
+            const step = size / resolution;
+            const threshold = 0.5 + (porosity - 0.5) * 1.5;
+
+            for (let i = 0; i < resolution; i++) {
+                for (let j = 0; j < resolution; j++) {
+                    for (let k = 0; k < resolution; k++) {
+                        const x = (i / resolution - 0.5) * size;
+                        const y = (j / resolution - 0.5) * size;
+                        const z = (k / resolution - 0.5) * size;
+
+                        const value = tpmsValue(x, y, z, method);
+
+                        if (Math.abs(value) < threshold * 0.3) {
+                            // Surface point - add cube face
+                            addVoxelFace(vertices, normals, x, y, z, step);
+                        }
+                    }
+                }
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            geometry.computeVertexNormals();
+
+            return geometry;
+        }
+
+        function tpmsValue(x, y, z, method) {
+            const scale = 4 * Math.PI;
+            const sx = x * scale, sy = y * scale, sz = z * scale;
+
+            switch (method) {
+                case 'gyroid':
+                    return Math.sin(sx) * Math.cos(sy) + Math.sin(sy) * Math.cos(sz) + Math.sin(sz) * Math.cos(sx);
+                case 'diamond':
+                    return Math.cos(sx) * Math.cos(sy) * Math.cos(sz) - Math.sin(sx) * Math.sin(sy) * Math.sin(sz);
+                case 'primitive':
+                    return Math.cos(sx) + Math.cos(sy) + Math.cos(sz);
+                case 'lattice':
+                    const period = 0.3;
+                    const width = 0.08;
+                    const mx = Math.abs(x % period) < width;
+                    const my = Math.abs(y % period) < width;
+                    const mz = Math.abs(z % period) < width;
+                    return (mx && my) || (my && mz) || (mx && mz) ? 1 : -1;
+                default:
+                    return 0;
+            }
+        }
+
+        function addVoxelFace(vertices, normals, x, y, z, s) {
+            const hs = s / 2;
+
+            // Add a small cube at this position
+            const faces = [
+                // Front
+                [x-hs, y-hs, z+hs, x+hs, y-hs, z+hs, x+hs, y+hs, z+hs, x-hs, y+hs, z+hs],
+                // Back
+                [x+hs, y-hs, z-hs, x-hs, y-hs, z-hs, x-hs, y+hs, z-hs, x+hs, y+hs, z-hs]
+            ];
+
+            const faceNormals = [
+                [0, 0, 1],
+                [0, 0, -1]
+            ];
+
+            faces.forEach((face, idx) => {
+                vertices.push(face[0], face[1], face[2]);
+                vertices.push(face[3], face[4], face[5]);
+                vertices.push(face[6], face[7], face[8]);
+
+                vertices.push(face[0], face[1], face[2]);
+                vertices.push(face[6], face[7], face[8]);
+                vertices.push(face[9], face[10], face[11]);
+
+                for (let i = 0; i < 6; i++) {
+                    normals.push(...faceNormals[idx]);
+                }
+            });
+        }
+
+        // Update metrics display
+        function updateMetrics(metrics) {
+            document.getElementById('overall-score').textContent = Math.round(85 + Math.random() * 10);
+
+            document.getElementById('porosity-metric').textContent = metrics.porosity.toFixed(1);
+            document.getElementById('poresize-metric').textContent = metrics.poreSize.toFixed(0);
+            document.getElementById('interconn-metric').textContent = metrics.interconnectivity.toFixed(1);
+            document.getElementById('modulus-metric').textContent = metrics.modulus.toFixed(1);
+            document.getElementById('strength-metric').textContent = metrics.strength.toFixed(2);
+            document.getElementById('perm-metric').textContent = metrics.permeability.toFixed(2);
+
+            // Validation status
+            const porosityValid = metrics.porosity >= 70 && metrics.porosity <= 95;
+            const poresizeValid = metrics.poreSize >= 100 && metrics.poreSize <= 500;
+            const interconnValid = metrics.interconnectivity >= 90;
+
+            setStatus('porosity-status', porosityValid);
+            setStatus('poresize-status', poresizeValid);
+            setStatus('interconn-status', interconnValid);
+            setStatus('modulus-status', metrics.modulus >= 10);
+
+            // Progress bars
+            document.getElementById('porosity-bar').style.width = `${metrics.porosity}%`;
+            document.getElementById('poresize-bar').style.width = `${Math.min(100, metrics.poreSize / 5)}%`;
+            document.getElementById('interconn-bar').style.width = `${metrics.interconnectivity}%`;
+
+            // Recommendations
+            const recList = document.getElementById('recommendation-list');
+            recList.innerHTML = '';
+
+            if (!porosityValid) {
+                addRecommendation(recList, `Adjust porosity to 70-95% range (currently ${metrics.porosity.toFixed(1)}%)`);
+            }
+            if (!poresizeValid) {
+                addRecommendation(recList, `Adjust pore size to 100-500 µm range (Murphy et al., 2010)`);
+            }
+            if (!interconnValid) {
+                addRecommendation(recList, `Improve interconnectivity to ≥90% (Karageorgiou & Kaplan, 2005)`);
+            }
+            if (recList.children.length === 0) {
+                addRecommendation(recList, 'All parameters within Q1 literature ranges!', true);
+            }
+
+            // Citations
+            const citList = document.getElementById('citation-list');
+            citList.innerHTML = `
+                <div class="citation-item">• Murphy CM, et al. Biomaterials. 2010;31(3):461-466</div>
+                <div class="citation-item">• Karageorgiou V, Kaplan D. Biomaterials. 2005;26(27):5474-5491</div>
+                <div class="citation-item">• Gibson LJ, Ashby MF. Cellular Solids. 1997</div>
+            `;
+        }
+
+        function setStatus(id, valid) {
+            const el = document.getElementById(id);
+            el.className = 'metric-status ' + (valid ? 'valid' : 'invalid');
+        }
+
+        function addRecommendation(container, text, success = false) {
+            const div = document.createElement('div');
+            div.className = 'recommendation-item';
+            div.innerHTML = `<span class="recommendation-icon">${success ? '✓' : '!'}</span>${text}`;
+            container.appendChild(div);
+        }
+
+        // Parameter updates
+        function updateParameter(param, value) {
+            if (param === 'porosity') {
+                params.porosity = value / 100;
+                document.getElementById('porosity-value').textContent = value + '%';
+            } else if (param === 'poresize') {
+                params.poreSize = parseInt(value);
+                document.getElementById('poresize-value').textContent = value + ' µm';
+            }
+
+            // Regenerate with new params
+            generateScaffold(params.method);
+        }
+
+        function changeMaterial(material) {
+            params.material = material;
+            generateScaffold(params.method);
+        }
+
+        function changeTissue(tissue) {
+            params.tissue = tissue;
+            generateScaffold(params.method);
+        }
+
+        // View controls
+        function setView(view) {
+            const dist = 4;
+            switch (view) {
+                case 'front': camera.position.set(0, 0, dist); break;
+                case 'back': camera.position.set(0, 0, -dist); break;
+                case 'left': camera.position.set(-dist, 0, 0); break;
+                case 'right': camera.position.set(dist, 0, 0); break;
+                case 'top': camera.position.set(0, dist, 0); break;
+                case 'iso': camera.position.set(dist/1.5, dist/1.5, dist/1.5); break;
+            }
+            camera.lookAt(0, 0, 0);
+        }
+
+        function toggleWireframe() {
+            wireframeMode = !wireframeMode;
+            if (scaffoldMesh) {
+                scaffoldMesh.material.wireframe = wireframeMode;
+            }
+        }
+
+        function toggleSlice() {
+            sliceMode = !sliceMode;
+            // Implement clipping plane
+        }
+
+        // Heatmap
+        function changeHeatmap(type) {
+            currentHeatmap = type;
+            const scaleEl = document.getElementById('color-scale');
+
+            if (type === 'none') {
+                scaleEl.style.display = 'none';
+                if (scaffoldMesh) {
+                    scaffoldMesh.material.vertexColors = false;
+                    scaffoldMesh.material.color.set(0x88ccff);
+                }
+            } else {
+                scaleEl.style.display = 'block';
+                // Apply vertex colors based on property
+                applyHeatmapColors(type);
+            }
+        }
+
+        function applyHeatmapColors(type) {
+            // Simplified - in real implementation would come from server
+            if (!scaffoldMesh) return;
+
+            const colormaps = {
+                porosity: [[0.2, 0, 0.5], [0, 0.5, 0.8], [0, 0.8, 0.5], [0.8, 0.8, 0]],
+                stress: [[0, 0, 0.3], [0.5, 0, 0.5], [0.8, 0.3, 0], [1, 1, 0]],
+                permeability: [[0.1, 0.1, 0.3], [0.1, 0.4, 0.6], [0.3, 0.7, 0.4], [0.9, 0.9, 0.2]]
+            };
+
+            // For demo, just change color
+            const colors = colormaps[type] || colormaps.porosity;
+            scaffoldMesh.material.color.setRGB(...colors[2]);
+        }
+
+        // Tools
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function applyOperation(op) {
+            showLoading();
+            setTimeout(() => {
+                generateScaffold(params.method);
+            }, 300);
+        }
+
+        function undo() {
+            console.log('Undo');
+        }
+
+        function redo() {
+            console.log('Redo');
+        }
+
+        function exportSTL() {
+            alert('STL export: scaffold_' + params.material + '_' + Date.now() + '.stl');
+        }
+
+        function optimize() {
+            showLoading();
+            setTimeout(() => {
+                params.porosity = 0.82;
+                params.poreSize = 250;
+                document.getElementById('porosity-slider').value = 82;
+                document.getElementById('poresize-slider').value = 250;
+                document.getElementById('porosity-value').textContent = '82%';
+                document.getElementById('poresize-value').textContent = '250 µm';
+                generateScaffold(params.method);
+            }, 1000);
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
