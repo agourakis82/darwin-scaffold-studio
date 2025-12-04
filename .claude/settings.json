@@ -1,0 +1,55 @@
+{
+  "project": {
+    "name": "Darwin Scaffold Studio",
+    "description": "Julia-based tissue engineering scaffold analysis platform",
+    "language": "julia",
+    "version": "2.0.1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(julia*)",
+      "Bash(cargo*)",
+      "Bash(git*)",
+      "Bash(gh*)",
+      "Bash(grep*)",
+      "Bash(find*)",
+      "Bash(cat*)",
+      "Bash(ls*)",
+      "Bash(cd*)",
+      "Bash(mkdir*)",
+      "Bash(rm *.jl)",
+      "Bash(pkill*)",
+      "Read",
+      "Write",
+      "Edit"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(sudo*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "echo 'Modifying: $FILE_PATH' >> .claude/dev.log"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "pattern": "src/.*\\.jl$",
+        "command": "julia --project=. -e 'try; include(\"test_minimal.jl\"); catch e; println(\"Warning: \", e); end' 2>/dev/null || true"
+      }
+    ]
+  },
+  "mcpServers": {
+    "darwin-julia": {
+      "command": "python3",
+      "args": [".claude/mcp-servers/darwin-julia-mcp.py"],
+      "env": {
+        "DARWIN_PATH": "/home/agourakis82/workspace/darwin-scaffold-studio"
+      }
+    }
+  }
+}
