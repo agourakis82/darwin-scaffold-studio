@@ -49,6 +49,13 @@ include("DarwinScaffoldStudio/Agents/DesignAgent.jl")
 include("DarwinScaffoldStudio/Agents/AnalysisAgent.jl")
 include("DarwinScaffoldStudio/Agents/SynthesisAgent.jl")
 
+# SEMANTIC LAYER: Epistemic Ontology (Demetrios-inspired)
+# Knowledge[τ, ε, δ, Φ] types + Schema.org + Hyperbolic embeddings
+@info "Loading Semantic layer (Ontology, KnowledgeGraph, EpistemicAgents)..."
+@safe_include "DarwinScaffoldStudio/Semantic/Ontology.jl" "Ontology"
+@safe_include "DarwinScaffoldStudio/Semantic/KnowledgeGraph.jl" "KnowledgeGraph"
+@safe_include "DarwinScaffoldStudio/Semantic/EpistemicAgents.jl" "EpistemicAgents"
+
 # FRONTIER: Advanced AI Modules (Optional but recommended)
 if SYSTEM_CONFIG.enable_frontier_ai
     @info "Loading FRONTIER AI modules (PINNs, TDA, GNN)..."
@@ -169,4 +176,3 @@ export
     optimize_scaffold_thesis
 
 end # module
-
