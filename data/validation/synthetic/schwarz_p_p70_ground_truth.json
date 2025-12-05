@@ -1,0 +1,13 @@
+{
+  "surface_area_mm2": 10.6248,
+  "target_porosity": 0.7,
+  "specific_surface_mm2_mm3": 10.6248,
+  "solid_fraction": 0.295104,
+  "dimensions": [100, 100, 100],
+  "total_volume_mm3": 1.0,
+  "porosity": 0.704896,
+  "tpms_type": schwarz_p,
+  "voxel_size_um": 10.0,
+  "threshold": 0.75,
+  "pore_size_estimate_um": 265.377607
+}

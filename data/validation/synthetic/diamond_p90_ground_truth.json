@@ -1,0 +1,13 @@
+{
+  "surface_area_mm2": 7.5672,
+  "target_porosity": 0.9,
+  "specific_surface_mm2_mm3": 7.5672,
+  "solid_fraction": 0.098232,
+  "dimensions": [100, 100, 100],
+  "total_volume_mm3": 1.0,
+  "porosity": 0.901768,
+  "tpms_type": diamond,
+  "voxel_size_um": 10.0,
+  "threshold": 0.679688,
+  "pore_size_estimate_um": 476.671953
+}

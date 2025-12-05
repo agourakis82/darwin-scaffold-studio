@@ -1,0 +1,13 @@
+{
+  "surface_area_mm2": 15.0096,
+  "target_porosity": 0.5,
+  "specific_surface_mm2_mm3": 15.0096,
+  "solid_fraction": 0.501344,
+  "dimensions": [100, 100, 100],
+  "total_volume_mm3": 1.0,
+  "porosity": 0.498656,
+  "tpms_type": neovius,
+  "voxel_size_um": 10.0,
+  "threshold": 0.046875,
+  "pore_size_estimate_um": 132.889884
+}
