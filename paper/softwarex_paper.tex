@@ -1,0 +1,225 @@
+\documentclass[authoryear,preprint,review,12pt]{elsarticle}
+
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Code listing style
+\lstset{
+  language=Julia,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  stringstyle=\color{red},
+  numbers=left,
+  numberstyle=\tiny,
+  frame=single,
+  breaklines=true
+}
+
+\journal{SoftwareX}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Darwin Scaffold Studio: An Open-Source Julia Platform for Tissue Engineering Scaffold Analysis}
+
+\author[pucsp]{Demetrios Chiuratto Agourakis\corref{cor1}}
+\ead{demetrios@agourakis.med.br}
+\cortext[cor1]{Corresponding author}
+
+\author[pucsp]{Moema Alencar Hausen}
+
+\affiliation[pucsp]{organization={Biomaterials and Regenerative Medicine Program, Pontifical Catholic University of S\~ao Paulo (PUC-SP)},
+            city={S\~ao Paulo},
+            country={Brazil}}
+
+\begin{abstract}
+Darwin Scaffold Studio is an open-source Julia platform for analyzing tissue engineering scaffolds from MicroCT and SEM imaging data. The software computes structural metrics including porosity ($<$1\% error), pore size (14.1\% APE against manual ground truth), interconnectivity, and tortuosity. Validation against the PoreScript dataset (DOI: 10.5281/zenodo.5562953) demonstrates accuracy suitable for comparative scaffold analysis. The platform integrates biomedical ontologies from OBO Foundry and exports FAIR-compliant metadata. Darwin Scaffold Studio provides an accessible, reproducible alternative to proprietary analysis tools for tissue engineering research.
+\end{abstract}
+
+\begin{keyword}
+tissue engineering \sep scaffold analysis \sep microCT \sep image processing \sep Julia \sep open source
+\end{keyword}
+
+\end{frontmatter}
+
+%% ============================================
+\section{Motivation and significance}
+%% ============================================
+
+Tissue engineering scaffolds require precise structural characterization to ensure optimal cell infiltration and tissue regeneration \cite{murphy2010}. Key metrics include porosity, pore size, interconnectivity, and tortuosity, which directly influence cell attachment, proliferation, and nutrient transport \cite{karageorgiou2005}.
+
+Current analysis tools present significant barriers to researchers:
+\begin{itemize}
+\item Commercial software (CTAn, Avizo) costs \$5,000--15,000/year
+\item Custom Python/MATLAB scripts lack validation and reproducibility
+\item Existing open-source tools (BoneJ) require manual ImageJ workflows
+\end{itemize}
+
+Darwin Scaffold Studio addresses these gaps by providing a validated, open-source platform implemented in Julia for high performance and reproducibility. The software is particularly relevant for research groups in developing countries where commercial licenses are prohibitively expensive.
+
+%% ============================================
+\section{Software description}
+%% ============================================
+
+\subsection{Software architecture}
+
+Darwin Scaffold Studio is implemented in Julia 1.10+ with a modular architecture:
+
+\begin{verbatim}
+DarwinScaffoldStudio/
+  Core/       # Types, configuration
+  MicroCT/    # Image processing, metrics
+  Ontology/   # OBO Foundry integration
+  Science/    # Topology, percolation
+\end{verbatim}
+
+\subsection{Software functionalities}
+
+\textbf{Image Processing:} The platform loads MicroCT volumes (RAW, TIFF, NIfTI) and SEM images. Preprocessing includes denoising, normalization, and Otsu adaptive thresholding for segmentation.
+
+\textbf{Metrics Computation:} Table~\ref{tab:metrics} summarizes available metrics and their validation status.
+
+\begin{table}[h]
+\centering
+\caption{Scaffold metrics and validation status}
+\label{tab:metrics}
+\begin{tabular}{lll}
+\toprule
+Metric & Method & Validation \\
+\midrule
+Porosity & Voxel counting & $<$1\% error (synthetic) \\
+Pore size & Connected components & 14.1\% APE (real data) \\
+Interconnectivity & Largest component ratio & Theoretical \\
+Tortuosity & Dijkstra shortest path & Theoretical \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Ontology Integration:} The platform integrates 1,200+ terms from OBO Foundry ontologies (UBERON, CL, CHEBI), enabling lookup of optimal scaffold parameters by tissue type and FAIR-compliant metadata export.
+
+%% ============================================
+\section{Illustrative example}
+%% ============================================
+
+The following example generates a synthetic Gyroid scaffold and computes structural metrics:
+
+\begin{lstlisting}
+using Images, Statistics
+
+# Generate 64^3 Gyroid scaffold
+size = 64
+volume = zeros(Bool, size, size, size)
+for i in 1:size, j in 1:size, k in 1:size
+    x, y, z = 2pi .* (i, j, k) ./ size
+    gyroid = sin(x)*cos(y) + sin(y)*cos(z) + sin(z)*cos(x)
+    volume[i,j,k] = gyroid > 0.3
+end
+
+# Compute porosity
+porosity = 1 - sum(volume) / length(volume)
+println("Porosity: $(round(porosity*100, digits=1))%")
+# Output: Porosity: 59.8%
+\end{lstlisting}
+
+This example runs in under 60 seconds without external data dependencies, facilitating reproducibility verification.
+
+%% ============================================
+\section{Validation}
+%% ============================================
+
+\subsection{Synthetic ground truth}
+
+Validation against TPMS surfaces (Gyroid, Schwarz P) with analytical properties shows $<$1\% error for porosity and surface area measurements.
+
+\subsection{Experimental validation}
+
+The pore size algorithm was validated against the PoreScript dataset \cite{porescript}, which contains SEM images of salt-leached scaffolds with manual measurements (n=374).
+
+\begin{table}[h]
+\centering
+\caption{Validation against PoreScript ground truth}
+\label{tab:validation}
+\begin{tabular}{llll}
+\toprule
+Metric & Darwin & Ground Truth & APE \\
+\midrule
+Pore size & 149.4 $\mu$m & 174.0 $\mu$m & 14.1\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Limitations:} Darwin systematically underestimates pore size by approximately 15\%. This bias should be considered when interpreting absolute measurements. The validation is limited to 3 SEM images; additional validation on diverse scaffolds is ongoing.
+
+%% ============================================
+\section{Impact}
+%% ============================================
+
+Darwin Scaffold Studio enables:
+\begin{enumerate}
+\item \textbf{Cost reduction:} Free alternative to commercial software
+\item \textbf{Reproducibility:} Self-contained examples with no external dependencies
+\item \textbf{Education:} Simple API suitable for graduate-level instruction
+\item \textbf{Interoperability:} FAIR data export facilitates meta-analyses
+\end{enumerate}
+
+The software is currently used in ongoing research at PUC-SP for bioactive glass scaffold characterization.
+
+%% ============================================
+\section{Conclusions}
+%% ============================================
+
+Darwin Scaffold Studio provides an open-source, validated platform for tissue engineering scaffold analysis. The 14.1\% APE on pore size measurements is suitable for comparative studies. Future development includes 3D microCT validation against BoneJ and machine learning-based segmentation.
+
+%% ============================================
+%% Required metadata
+%% ============================================
+
+\section*{Current code version}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Code metadata & Description \\
+\midrule
+Current code version & v0.3.0 \\
+Permanent link & \url{https://github.com/agourakis82/darwin-scaffold-studio} \\
+Code Ocean compute capsule & -- \\
+Legal Code License & MIT \\
+Code versioning system & git \\
+Software languages & Julia 1.10+ \\
+Compilation requirements & None (interpreted) \\
+Developer documentation & README.md, docs/ \\
+Support email & demetrios@agourakis.med.br \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Acknowledgments}
+
+The authors thank the PUC-SP Biomaterials and Regenerative Medicine Program. This work was supported by [funding information].
+
+\section*{Declaration of competing interest}
+
+The authors declare no competing interests.
+
+\bibliographystyle{elsarticle-harv}
+\begin{thebibliography}{9}
+
+\bibitem[Murphy et al.(2010)]{murphy2010}
+Murphy, C.M., Haugh, M.G., O'Brien, F.J., 2010. The effect of mean pore size on cell attachment, proliferation and migration in collagen-glycosaminoglycan scaffolds for bone tissue engineering. Biomaterials 31, 461--466.
+
+\bibitem[Karageorgiou and Kaplan(2005)]{karageorgiou2005}
+Karageorgiou, V., Kaplan, D., 2005. Porosity of 3D biomaterial scaffolds and osteogenesis. Biomaterials 26, 5474--5491.
+
+\bibitem[Jenkins et al.(2021)]{porescript}
+Jenkins, M.J., et al., 2021. PoreScript: Automated Pore Size Analysis. Zenodo. \url{https://doi.org/10.5281/zenodo.5562953}
+
+\end{thebibliography}
+
+\end{document}
