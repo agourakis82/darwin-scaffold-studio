@@ -27,9 +27,10 @@ using JSON3
 using SQLite
 using Dates
 
-# Import core OBO terms from parent module's OBOFoundry
-using ...OBOFoundry: OBOTerm, UBERON, CL, CHEBI, NCIT, GO, BTO, DOID
-using ...OBOFoundry: lookup_term as core_lookup, get_iri
+# Import core OBO terms from sibling OBOFoundry module
+# Both OntologyManager and OBOFoundry are inside the Ontology wrapper
+using ..OBOFoundry: OBOTerm, UBERON, CL, CHEBI, NCIT, GO, BTO, DOID
+using ..OBOFoundry: lookup_term as core_lookup, get_iri
 
 export OntologyConfig, init_ontology_system, shutdown_ontology_system
 export smart_lookup, batch_lookup, search_terms
@@ -1066,7 +1067,7 @@ function _compute_similarity(::LinSimilarity, id1::String, id2::String, lca::Str
 end
 
 """
-    find_similar_terms(id::String, candidates::Vector{String}; 
+    find_similar_terms(id::String, candidates::Vector{String};
                        method=WuPalmerSimilarity(), top_k::Int=10) -> Vector{Tuple{String, Float64}}
 
 Find most similar terms from a candidate set.
@@ -1157,7 +1158,7 @@ const TISSUE_RECOMMENDATIONS = Dict{String,Dict{Symbol,Vector{NamedTuple}}}(
         ]
     ),
 
-    # Cartilage tissue recommendations  
+    # Cartilage tissue recommendations
     "UBERON:0002418" => Dict(  # cartilage tissue
         :cells => [
             (id="CL:0000138", name="chondrocyte", rationale="Native cartilage cells, maintain ECM", evidence=:high,
@@ -1279,7 +1280,7 @@ const TISSUE_RECOMMENDATIONS = Dict{String,Dict{Symbol,Vector{NamedTuple}}}(
         ]
     ),
 
-    # Vascular tissue recommendations  
+    # Vascular tissue recommendations
     "UBERON:0001981" => Dict(  # blood vessel
         :cells => [
             (id="CL:0000115", name="endothelial cell", rationale="Line vessel lumen, prevent thrombosis", evidence=:high,
@@ -1652,8 +1653,8 @@ struct OntologyEdge
 end
 
 """
-    build_ontology_subgraph(root_ids::Vector{String}; 
-                            max_depth::Int=3, 
+    build_ontology_subgraph(root_ids::Vector{String};
+                            max_depth::Int=3,
                             include_children::Bool=true) -> Tuple{Vector{OntologyNode}, Vector{OntologyEdge}}
 
 Build a subgraph of the ontology starting from root terms.

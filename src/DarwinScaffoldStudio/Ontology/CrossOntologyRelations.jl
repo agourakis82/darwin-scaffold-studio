@@ -15,7 +15,9 @@ export get_cells_for_tissue, get_materials_for_tissue, get_processes_for_cell
 export get_processes_for_tissue, get_material_properties
 export validate_scaffold_design
 
-using ..Types: ScaffoldParameters
+# ScaffoldParameters is imported by parent Ontology module
+# We access it via the parent's import
+using ...Types: ScaffoldParameters
 
 #=============================================================================
                             DATA STRUCTURES

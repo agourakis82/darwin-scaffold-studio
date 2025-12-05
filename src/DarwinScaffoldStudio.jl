@@ -56,24 +56,49 @@ include("DarwinScaffoldStudio/Agents/SynthesisAgent.jl")
 @safe_include "DarwinScaffoldStudio/Semantic/KnowledgeGraph.jl" "KnowledgeGraph"
 @safe_include "DarwinScaffoldStudio/Semantic/EpistemicAgents.jl" "EpistemicAgents"
 
-# OBO FOUNDRY INTEGRATION: Standard biomedical ontologies
-# UBERON (anatomy), CL (cells), CHEBI (chemicals), GO (processes), NCIT (diseases)
-@info "Loading OBO Foundry integration (UBERON, CL, CHEBI, GO, NCIT, BTO)..."
-include("DarwinScaffoldStudio/Ontology/OBOFoundry.jl")
+# OBO FOUNDRY INTEGRATION + ONTOLOGY LIBRARIES
+# All ontology modules wrapped in a single module to fix import paths
+@info "Loading OBO Foundry integration + Ontology Libraries..."
+module Ontology
+    # First load OBOFoundry (provides OBOTerm struct)
+    include("DarwinScaffoldStudio/Ontology/OBOFoundry.jl")
+    using .OBOFoundry: OBOTerm
 
-# ONTOLOGY MANAGER: 3-Tier lookup system with caching
-# Tier 1: Hardcoded (~150 terms), Tier 2: SQLite cache, Tier 3: EBI OLS API
-@info "Loading OntologyManager (3-tier lookup with FAIR export)..."
-@safe_include "DarwinScaffoldStudio/Ontology/OntologyManager.jl" "OntologyManager"
+    # Now load all libraries (they can use ..OBOFoundry correctly)
+    include("DarwinScaffoldStudio/Ontology/TissueLibrary.jl")
+    include("DarwinScaffoldStudio/Ontology/CellLibrary.jl")
+    include("DarwinScaffoldStudio/Ontology/MaterialLibrary.jl")
+    include("DarwinScaffoldStudio/Ontology/DiseaseLibrary.jl")
+    include("DarwinScaffoldStudio/Ontology/ProcessLibrary.jl")
+    include("DarwinScaffoldStudio/Ontology/FabricationLibrary.jl")
+    include("DarwinScaffoldStudio/Ontology/TissueLibraryExtended.jl")
+    include("DarwinScaffoldStudio/Ontology/CellLibraryExtended.jl")
+    include("DarwinScaffoldStudio/Ontology/MaterialLibraryExtended.jl")
+    include("DarwinScaffoldStudio/Ontology/CrossOntologyRelations.jl")
 
-# ONTOLOGY LIBRARIES: Comprehensive tissue, cell, material, disease, and fabrication databases
-# 150+ tissues, 100+ cells, 80+ materials, 60+ diseases, 40+ fabrication methods with tissue mappings
-@info "Loading Ontology Libraries (TissueLibrary, CellLibrary, MaterialLibrary, DiseaseLibrary, FabricationLibrary)..."
-@safe_include "DarwinScaffoldStudio/Ontology/TissueLibrary.jl" "TissueLibrary"
-@safe_include "DarwinScaffoldStudio/Ontology/CellLibrary.jl" "CellLibrary"
-@safe_include "DarwinScaffoldStudio/Ontology/MaterialLibrary.jl" "MaterialLibrary"
-@safe_include "DarwinScaffoldStudio/Ontology/DiseaseLibrary.jl" "DiseaseLibrary"
-@safe_include "DarwinScaffoldStudio/Ontology/FabricationLibrary.jl" "FabricationLibrary"
+    # OntologyManager also needs OBOFoundry, include it here
+    @info "Loading OntologyManager (3-tier lookup with FAIR export)..."
+    include("DarwinScaffoldStudio/Ontology/OntologyManager.jl")
+
+    # Re-export everything
+    using .OBOFoundry
+    using .TissueLibrary
+    using .CellLibrary
+    using .MaterialLibrary
+    using .DiseaseLibrary
+    using .ProcessLibrary
+    using .FabricationLibrary
+    using .TissueLibraryExtended
+    using .CellLibraryExtended
+    using .MaterialLibraryExtended
+    using .CrossOntologyRelations
+    using .OntologyManager
+
+    export OBOFoundry, TissueLibrary, CellLibrary, MaterialLibrary
+    export DiseaseLibrary, ProcessLibrary, FabricationLibrary
+    export TissueLibraryExtended, CellLibraryExtended, MaterialLibraryExtended
+    export CrossOntologyRelations, OntologyManager
+end
 
 # INTERACTIVE: ScaffoldEditor with Q1 Literature Validation
 @info "Loading Interactive layer (ScaffoldEditor)..."
