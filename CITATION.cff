@@ -3,6 +3,7 @@ message: "If you use this software, please cite it as below."
 title: "Darwin Scaffold Studio: Computational Platform for Tissue Engineering Scaffold Analysis"
 version: 0.3.0
 date-released: 2025-12-05
+doi: "10.5281/zenodo.17832882"
 repository-code: "https://github.com/agourakis82/darwin-scaffold-studio"
 license: MIT
 type: software

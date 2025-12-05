@@ -210,11 +210,12 @@ If you use Darwin Scaffold Studio in your research, please cite:
 
 ```bibtex
 @software{darwin_scaffold_studio,
-  author = {Agourakis, Demetrios},
-  title = {Darwin Scaffold Studio: Computational Platform for Tissue Engineering},
-  year = {2024},
+  author = {Agourakis, Demetrios Chiuratto},
+  title = {Darwin Scaffold Studio: Computational Platform for Tissue Engineering Scaffold Analysis},
+  year = {2025},
+  doi = {10.5281/zenodo.17832882},
   url = {https://github.com/agourakis82/darwin-scaffold-studio},
-  version = {0.2.1}
+  version = {0.3.0}
 }
 ```
 
