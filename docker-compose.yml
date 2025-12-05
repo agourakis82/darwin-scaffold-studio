@@ -1,0 +1,81 @@
+# Darwin Scaffold Studio - Docker Compose Configuration
+# For development and reproducible analysis
+
+version: '3.8'
+
+services:
+  # Main analysis service
+  darwin-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: darwin-scaffold-studio:latest
+    container_name: darwin-scaffold-studio
+    volumes:
+      # Mount user data directory
+      - ./user_data:/app/user_data:rw
+      # Mount results output
+      - ./results:/app/results:rw
+      # For development: mount source code
+      - ./src:/app/src:ro
+    environment:
+      - JULIA_NUM_THREADS=auto
+      - DARWIN_LOG_LEVEL=info
+    stdin_open: true
+    tty: true
+    command: >
+      julia --project=. -e '
+        include("src/DarwinScaffoldStudio.jl");
+        using .DarwinScaffoldStudio;
+        println("Darwin Scaffold Studio ready!");
+        println("Available commands:");
+        println("  analyze_scaffold(path) - Analyze MicroCT/SEM data");
+        println("  run_optimization()     - Optimize scaffold design");
+        println("  export_results()       - Export to FAIR format");
+      '
+
+  # Run tests
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./test:/app/test:ro
+      - ./src:/app/src:ro
+    command: julia --project=. test/runtests.jl
+
+  # Run validation benchmark
+  benchmark:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/data:ro
+      - ./scripts:/app/scripts:ro
+      - ./results:/app/results:rw
+    command: julia --project=. scripts/run_validation_benchmark.jl
+
+  # Jupyter notebook server (optional)
+  notebook:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/app/notebooks:rw
+      - ./user_data:/app/user_data:rw
+      - ./results:/app/results:rw
+    command: >
+      julia --project=. -e '
+        using Pkg;
+        Pkg.add("IJulia");
+        using IJulia;
+        notebook(dir="/app/notebooks", detached=false)
+      '
+
+# Named volumes for persistence
+volumes:
+  user_data:
+  results:
+  notebooks:

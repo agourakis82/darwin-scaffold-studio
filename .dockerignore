@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# Julia compiled files
+*.jl.cov
+*.jl.mem
+deps/build.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large data files (user should mount these)
+user_data/
+results/
+*.raw
+*.nii
+*.nii.gz
+*.tif
+*.tiff
+
+# Logs
+*.log
+logs/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Documentation build
+docs/build/
+site/
+
+# Python (if any)
+__pycache__/
+*.pyc
+.venv/
+venv/

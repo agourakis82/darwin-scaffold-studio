@@ -57,8 +57,7 @@ struct Confidence
     end
 end
 
-# Confidence constructors
-Confidence(value::Float64) = Confidence(value, method=:computed)
+# Confidence constructors (no duplicate - inner constructor already handles single Float64)
 high_confidence() = Confidence(0.95, method=:measured, evidence_count=10)
 medium_confidence() = Confidence(0.75, method=:computed, evidence_count=3)
 low_confidence() = Confidence(0.50, method=:inferred, evidence_count=1)
