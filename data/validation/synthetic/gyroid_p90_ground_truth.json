@@ -6,7 +6,7 @@
   "dimensions": [100, 100, 100],
   "total_volume_mm3": 1.0,
   "porosity": 0.900077,
-  "tpms_type": gyroid,
+  "tpms_type": "gyroid",
   "voxel_size_um": 10.0,
   "threshold": 1.195312,
   "pore_size_estimate_um": 549.396936

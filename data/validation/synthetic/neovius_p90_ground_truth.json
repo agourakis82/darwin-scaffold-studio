@@ -6,7 +6,7 @@
   "dimensions": [100, 100, 100],
   "total_volume_mm3": 1.0,
   "porosity": 0.829416,
-  "tpms_type": neovius,
+  "tpms_type": "neovius",
   "voxel_size_um": 10.0,
   "threshold": 3.0,
   "pore_size_estimate_um": 512.17488

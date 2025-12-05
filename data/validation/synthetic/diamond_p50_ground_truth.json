@@ -6,7 +6,7 @@
   "dimensions": [100, 100, 100],
   "total_volume_mm3": 1.0,
   "porosity": 0.499528,
-  "tpms_type": diamond,
+  "tpms_type": "diamond",
   "voxel_size_um": 10.0,
   "threshold": 0.0,
   "pore_size_estimate_um": 133.207467

@@ -6,7 +6,7 @@
   "dimensions": [100, 100, 100],
   "total_volume_mm3": 1.0,
   "porosity": 0.903368,
-  "tpms_type": schwarz_p,
+  "tpms_type": "schwarz_p",
   "voxel_size_um": 10.0,
   "threshold": 1.6875,
   "pore_size_estimate_um": 758.113461

@@ -196,11 +196,12 @@ Save scaffold as raw binary file (compatible with ImageJ, CTAn, etc.)
 """
 function save_raw(filename::String, scaffold::Array{Bool,3})
     # Convert to UInt8 (0 = pore, 255 = solid)
-    data = UInt8.(scaffold) .* 255
+    data = UInt8.(scaffold) .* UInt8(255)
+    # Write as raw bytes (column-major order)
     open(filename, "w") do f
-        write(f, data)
+        unsafe_write(f, pointer(data), length(data))
     end
-    println("Saved: $filename ($(size(scaffold)))")
+    println("Saved: $filename ($(size(scaffold)), $(length(data)) bytes)")
 end
 
 """
@@ -217,6 +218,8 @@ function save_ground_truth(filename::String, metrics::Dict)
                 println(f, "  \"$k\": [$(join(v, ", "))]$comma")
             elseif v isa AbstractFloat
                 println(f, "  \"$k\": $(round(v, digits=6))$comma")
+            elseif v isa AbstractString
+                println(f, "  \"$k\": \"$v\"$comma")  # Strings need quotes
             else
                 println(f, "  \"$k\": $v$comma")
             end
