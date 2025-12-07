@@ -85,6 +85,10 @@ module Ontology
     include("DarwinScaffoldStudio/Ontology/CompatibilityMatrix.jl")
     include("DarwinScaffoldStudio/Ontology/BiomarkersLibrary.jl")
 
+    # OntologyQuery: Cross-library query engine
+    @info "Loading OntologyQuery (cross-library lookups)..."
+    include("DarwinScaffoldStudio/Ontology/OntologyQuery.jl")
+
     # OntologyManager also needs OBOFoundry, include it here
     @info "Loading OntologyManager (3-tier lookup with FAIR export)..."
     include("DarwinScaffoldStudio/Ontology/OntologyManager.jl")
@@ -108,6 +112,7 @@ module Ontology
     using .DrugDeliveryLibrary
     using .CompatibilityMatrix
     using .BiomarkersLibrary
+    using .OntologyQuery
 
     export OBOFoundry, TissueLibrary, CellLibrary, MaterialLibrary
     export DiseaseLibrary, ProcessLibrary, FabricationLibrary
@@ -116,6 +121,7 @@ module Ontology
     # New library exports
     export MolecularPropertiesLibrary, PhysicalPropertiesLibrary
     export DrugDeliveryLibrary, CompatibilityMatrix, BiomarkersLibrary
+    export OntologyQuery
 end
 
 # INTERACTIVE: ScaffoldEditor with Q1 Literature Validation

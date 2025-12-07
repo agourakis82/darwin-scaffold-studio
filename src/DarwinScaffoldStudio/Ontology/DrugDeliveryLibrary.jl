@@ -57,6 +57,7 @@ struct DrugPharmacokinetics
     blood_brain_barrier::Bool          # Crosses BBB
     placental_transfer::Bool           # Crosses placenta
     milk_excretion::Bool              # Excreted in breast milk
+    bone_penetration::Bool            # Penetrates bone tissue
     tissue_distribution::Dict{String,Float64}  # Tissue:plasma ratio
 
     # Metabolism
@@ -96,6 +97,7 @@ function DrugPharmacokinetics(id::String, name::String;
     blood_brain_barrier::Bool=false,
     placental_transfer::Bool=false,
     milk_excretion::Bool=false,
+    bone_penetration::Bool=false,
     tissue_distribution::Dict{String,Float64}=Dict{String,Float64}(),
     primary_metabolism::String="",
     cyp_enzymes::Vector{String}=String[],
@@ -116,7 +118,8 @@ function DrugPharmacokinetics(id::String, name::String;
     DrugPharmacokinetics(id, name, therapeutic_class,
         bioavailability_percent, volume_distribution_l_kg, protein_binding_percent,
         half_life_h, clearance_ml_min_kg, tmax_h, cmax_ng_ml, ka_h,
-        blood_brain_barrier, placental_transfer, milk_excretion, tissue_distribution,
+        blood_brain_barrier, placental_transfer, milk_excretion, bone_penetration,
+        tissue_distribution,
         primary_metabolism, cyp_enzymes, active_metabolites, metabolic_ratio,
         renal_excretion_percent, fecal_excretion_percent, biliary_excretion,
         therapeutic_range_min, therapeutic_range_max, toxic_concentration,
@@ -545,6 +548,555 @@ const DRUG_PK_DB = Dict{String,DrugPharmacokinetics}(
         primary_metabolism="Proteolytic degradation",
         local_therapeutic_dose_ug=100.0,
         local_duration_days=7.0
+    ),
+
+    # =========================================================================
+    # ADDITIONAL ANTIBIOTICS
+    # =========================================================================
+
+    "cefazolin" => DrugPharmacokinetics(
+        "DB01327", "Cefazolin";
+        therapeutic_class="First-generation cephalosporin",
+        bioavailability_percent=0.0,  # IV/IM only
+        volume_distribution_l_kg=0.12,
+        protein_binding_percent=85.0,
+        half_life_h=1.8,
+        clearance_ml_min_kg=1.2,
+        tmax_h=1.0,
+        renal_excretion_percent=90.0,
+        therapeutic_range_min=10.0,
+        therapeutic_range_max=100.0,
+        standard_dose_mg=2000.0,
+        dosing_frequency="q8h",
+        local_therapeutic_dose_ug=500.0,
+        local_duration_days=7.0
+    ),
+
+    "tobramycin" => DrugPharmacokinetics(
+        "DB00684", "Tobramycin";
+        therapeutic_class="Aminoglycoside antibiotic",
+        bioavailability_percent=0.0,  # Parenteral only
+        volume_distribution_l_kg=0.25,
+        protein_binding_percent=10.0,
+        half_life_h=2.5,
+        clearance_ml_min_kg=1.0,
+        blood_brain_barrier=false,
+        renal_excretion_percent=95.0,
+        therapeutic_range_min=4.0,
+        therapeutic_range_max=10.0,
+        toxic_concentration=12.0,  # Nephrotoxicity
+        standard_dose_mg=5.0,  # mg/kg/day
+        dosing_frequency="q8h",
+        local_therapeutic_dose_ug=200.0,
+        local_duration_days=14.0
+    ),
+
+    "clindamycin" => DrugPharmacokinetics(
+        "DB01190", "Clindamycin";
+        therapeutic_class="Lincosamide antibiotic",
+        bioavailability_percent=90.0,
+        volume_distribution_l_kg=0.6,
+        protein_binding_percent=94.0,
+        half_life_h=2.5,
+        clearance_ml_min_kg=3.0,
+        primary_metabolism="Hepatic (CYP3A4)",
+        cyp_enzymes=["CYP3A4"],
+        biliary_excretion=true,
+        bone_penetration=true,
+        therapeutic_range_min=2.0,
+        therapeutic_range_max=8.0,
+        standard_dose_mg=600.0,
+        dosing_frequency="q8h",
+        local_therapeutic_dose_ug=300.0,
+        local_duration_days=10.0
+    ),
+
+    "daptomycin" => DrugPharmacokinetics(
+        "DB00080", "Daptomycin";
+        therapeutic_class="Lipopeptide antibiotic",
+        bioavailability_percent=0.0,  # IV only
+        volume_distribution_l_kg=0.1,
+        protein_binding_percent=92.0,
+        half_life_h=8.0,
+        clearance_ml_min_kg=0.5,
+        renal_excretion_percent=80.0,
+        therapeutic_range_min=10.0,
+        therapeutic_range_max=30.0,
+        standard_dose_mg=6.0,  # mg/kg
+        dosing_frequency="daily",
+        local_therapeutic_dose_ug=500.0,
+        local_duration_days=14.0
+    ),
+
+    "linezolid" => DrugPharmacokinetics(
+        "DB00601", "Linezolid";
+        therapeutic_class="Oxazolidinone antibiotic",
+        bioavailability_percent=100.0,
+        volume_distribution_l_kg=0.65,
+        protein_binding_percent=31.0,
+        half_life_h=5.0,
+        clearance_ml_min_kg=2.5,
+        blood_brain_barrier=true,
+        bone_penetration=true,
+        therapeutic_range_min=8.0,
+        therapeutic_range_max=26.0,
+        standard_dose_mg=600.0,
+        dosing_frequency="q12h",
+        local_therapeutic_dose_ug=400.0,
+        local_duration_days=14.0
+    ),
+
+    "azithromycin" => DrugPharmacokinetics(
+        "DB00207", "Azithromycin";
+        therapeutic_class="Macrolide antibiotic",
+        bioavailability_percent=37.0,
+        volume_distribution_l_kg=31.0,  # Very high tissue distribution
+        protein_binding_percent=50.0,
+        half_life_h=68.0,  # Very long
+        clearance_ml_min_kg=10.0,
+        biliary_excretion=true,
+        fecal_excretion_percent=50.0,
+        therapeutic_range_min=0.1,
+        therapeutic_range_max=0.5,
+        standard_dose_mg=500.0,
+        dosing_frequency="daily",
+        local_therapeutic_dose_ug=200.0,
+        local_duration_days=5.0
+    ),
+
+    "minocycline" => DrugPharmacokinetics(
+        "DB01017", "Minocycline";
+        therapeutic_class="Tetracycline antibiotic",
+        bioavailability_percent=95.0,
+        volume_distribution_l_kg=1.3,
+        protein_binding_percent=76.0,
+        half_life_h=16.0,
+        clearance_ml_min_kg=1.5,
+        blood_brain_barrier=true,
+        bone_penetration=true,
+        therapeutic_range_min=1.0,
+        therapeutic_range_max=4.0,
+        standard_dose_mg=100.0,
+        dosing_frequency="q12h",
+        local_therapeutic_dose_ug=100.0,
+        local_duration_days=21.0
+    ),
+
+    # =========================================================================
+    # ADDITIONAL GROWTH FACTORS
+    # =========================================================================
+
+    "rhBMP7" => DrugPharmacokinetics(
+        "rhBMP7", "Recombinant human BMP-7 (OP-1)";
+        therapeutic_class="Osteogenic growth factor",
+        volume_distribution_l_kg=0.1,
+        half_life_h=48.0,
+        primary_metabolism="Proteolytic degradation",
+        local_therapeutic_dose_ug=3500.0,
+        local_duration_days=21.0
+    ),
+
+    "PDGF_BB" => DrugPharmacokinetics(
+        "PDGF-BB", "Platelet-Derived Growth Factor BB";
+        therapeutic_class="Mitogenic growth factor",
+        half_life_h=0.5,
+        primary_metabolism="Receptor-mediated endocytosis",
+        local_therapeutic_dose_ug=100.0,
+        local_duration_days=14.0
+    ),
+
+    "FGF2" => DrugPharmacokinetics(
+        "bFGF", "Basic Fibroblast Growth Factor";
+        therapeutic_class="Angiogenic/mitogenic growth factor",
+        half_life_h=0.25,  # 15 min
+        primary_metabolism="Proteolytic degradation",
+        local_therapeutic_dose_ug=50.0,
+        local_duration_days=7.0
+    ),
+
+    "TGF_beta1" => DrugPharmacokinetics(
+        "TGF-β1", "Transforming Growth Factor Beta 1";
+        therapeutic_class="Fibrogenic/chondrogenic growth factor",
+        half_life_h=0.1,  # ~6 min
+        primary_metabolism="Receptor-mediated endocytosis",
+        local_therapeutic_dose_ug=10.0,
+        local_duration_days=14.0
+    ),
+
+    "IGF1" => DrugPharmacokinetics(
+        "IGF-1", "Insulin-Like Growth Factor 1";
+        therapeutic_class="Anabolic growth factor",
+        bioavailability_percent=100.0,  # SC
+        volume_distribution_l_kg=0.1,
+        protein_binding_percent=99.0,  # IGFBP
+        half_life_h=12.0,  # With binding proteins
+        primary_metabolism="Hepatic/renal",
+        local_therapeutic_dose_ug=100.0,
+        local_duration_days=21.0
+    ),
+
+    "NGF" => DrugPharmacokinetics(
+        "NGF", "Nerve Growth Factor";
+        therapeutic_class="Neurotrophic growth factor",
+        half_life_h=0.5,
+        primary_metabolism="Proteolytic degradation",
+        local_therapeutic_dose_ug=50.0,
+        local_duration_days=14.0
+    ),
+
+    "EGF" => DrugPharmacokinetics(
+        "EGF", "Epidermal Growth Factor";
+        therapeutic_class="Epithelial mitogenic factor",
+        half_life_h=0.15,  # ~9 min
+        primary_metabolism="Receptor-mediated endocytosis",
+        local_therapeutic_dose_ug=10.0,
+        local_duration_days=7.0
+    ),
+
+    "HGF" => DrugPharmacokinetics(
+        "HGF", "Hepatocyte Growth Factor";
+        therapeutic_class="Angiogenic/morphogenic factor",
+        half_life_h=0.1,
+        primary_metabolism="Proteolytic degradation",
+        local_therapeutic_dose_ug=100.0,
+        local_duration_days=14.0
+    ),
+
+    # =========================================================================
+    # ADDITIONAL CHEMOTHERAPEUTICS
+    # =========================================================================
+
+    "cisplatin" => DrugPharmacokinetics(
+        "DB00515", "Cisplatin";
+        therapeutic_class="Platinum-based chemotherapy",
+        bioavailability_percent=0.0,  # IV only
+        volume_distribution_l_kg=0.5,
+        protein_binding_percent=90.0,
+        half_life_h=72.0,  # Terminal
+        clearance_ml_min_kg=0.4,
+        blood_brain_barrier=false,
+        renal_excretion_percent=90.0,
+        therapeutic_range_min=1.0,
+        therapeutic_range_max=5.0,
+        toxic_concentration=10.0,  # Nephrotoxicity
+        standard_dose_mg=100.0,  # mg/m²
+        dosing_frequency="q3weeks",
+        local_therapeutic_dose_ug=200.0,
+        local_duration_days=14.0
+    ),
+
+    "5_fluorouracil" => DrugPharmacokinetics(
+        "DB00544", "5-Fluorouracil";
+        therapeutic_class="Antimetabolite chemotherapy",
+        bioavailability_percent=30.0,
+        volume_distribution_l_kg=0.25,
+        protein_binding_percent=10.0,
+        half_life_h=0.25,  # Very short
+        clearance_ml_min_kg=15.0,
+        blood_brain_barrier=true,
+        primary_metabolism="Hepatic (DPD)",
+        therapeutic_range_min=200.0,
+        therapeutic_range_max=1000.0,
+        standard_dose_mg=500.0,  # mg/m²
+        dosing_frequency="continuous",
+        local_therapeutic_dose_ug=1000.0,
+        local_duration_days=7.0
+    ),
+
+    "gemcitabine" => DrugPharmacokinetics(
+        "DB00441", "Gemcitabine";
+        therapeutic_class="Nucleoside analog chemotherapy",
+        bioavailability_percent=0.0,  # IV only
+        volume_distribution_l_kg=0.5,
+        protein_binding_percent=10.0,
+        half_life_h=0.5,  # Short infusion
+        clearance_ml_min_kg=80.0,
+        blood_brain_barrier=false,
+        renal_excretion_percent=99.0,
+        standard_dose_mg=1000.0,  # mg/m²
+        dosing_frequency="weekly",
+        local_therapeutic_dose_ug=500.0,
+        local_duration_days=7.0
+    ),
+
+    "etoposide" => DrugPharmacokinetics(
+        "DB00773", "Etoposide";
+        therapeutic_class="Topoisomerase II inhibitor",
+        bioavailability_percent=50.0,
+        volume_distribution_l_kg=0.35,
+        protein_binding_percent=94.0,
+        half_life_h=7.0,
+        clearance_ml_min_kg=1.5,
+        blood_brain_barrier=false,
+        primary_metabolism="Hepatic (CYP3A4)",
+        cyp_enzymes=["CYP3A4"],
+        biliary_excretion=true,
+        renal_excretion_percent=45.0,
+        standard_dose_mg=100.0,  # mg/m²
+        dosing_frequency="daily×5",
+        local_therapeutic_dose_ug=300.0,
+        local_duration_days=21.0
+    ),
+
+    # =========================================================================
+    # ANTI-INFLAMMATORY / IMMUNOMODULATORY
+    # =========================================================================
+
+    "prednisone" => DrugPharmacokinetics(
+        "DB00635", "Prednisone";
+        therapeutic_class="Corticosteroid (systemic)",
+        bioavailability_percent=80.0,
+        volume_distribution_l_kg=0.9,
+        protein_binding_percent=70.0,
+        half_life_h=3.5,
+        clearance_ml_min_kg=3.5,
+        primary_metabolism="Hepatic (CYP3A4)",
+        cyp_enzymes=["CYP3A4"],
+        active_metabolites=["prednisolone"],
+        standard_dose_mg=40.0,
+        dosing_frequency="daily",
+        local_therapeutic_dose_ug=500.0,
+        local_duration_days=14.0
+    ),
+
+    "triamcinolone" => DrugPharmacokinetics(
+        "DB00620", "Triamcinolone Acetonide";
+        therapeutic_class="Corticosteroid (depot)",
+        bioavailability_percent=100.0,  # IM/intra-articular
+        volume_distribution_l_kg=0.8,
+        protein_binding_percent=68.0,
+        half_life_h=88.0,  # IM depot
+        primary_metabolism="Hepatic",
+        standard_dose_mg=40.0,  # Per injection
+        dosing_frequency="q3months",
+        local_therapeutic_dose_ug=200.0,
+        local_duration_days=60.0
+    ),
+
+    "celecoxib" => DrugPharmacokinetics(
+        "DB00482", "Celecoxib";
+        therapeutic_class="COX-2 selective inhibitor",
+        bioavailability_percent=40.0,
+        volume_distribution_l_kg=6.0,
+        protein_binding_percent=97.0,
+        half_life_h=11.0,
+        clearance_ml_min_kg=7.0,
+        tmax_h=3.0,
+        primary_metabolism="Hepatic (CYP2C9)",
+        cyp_enzymes=["CYP2C9"],
+        standard_dose_mg=200.0,
+        dosing_frequency="daily",
+        local_therapeutic_dose_ug=100.0,
+        local_duration_days=14.0
+    ),
+
+    "tacrolimus" => DrugPharmacokinetics(
+        "DB00864", "Tacrolimus (FK506)";
+        therapeutic_class="Calcineurin inhibitor",
+        bioavailability_percent=25.0,
+        volume_distribution_l_kg=1.0,
+        protein_binding_percent=99.0,
+        half_life_h=12.0,
+        clearance_ml_min_kg=2.0,
+        blood_brain_barrier=true,
+        primary_metabolism="Hepatic (CYP3A4)",
+        cyp_enzymes=["CYP3A4"],
+        therapeutic_range_min=5.0,
+        therapeutic_range_max=20.0,
+        toxic_concentration=30.0,  # Nephrotoxicity
+        standard_dose_mg=0.1,  # mg/kg/day
+        dosing_frequency="q12h",
+        local_therapeutic_dose_ug=50.0,
+        local_duration_days=30.0
+    ),
+
+    # =========================================================================
+    # ANTIRESORPTIVE / ANABOLIC BONE AGENTS
+    # =========================================================================
+
+    "zoledronic_acid" => DrugPharmacokinetics(
+        "DB00399", "Zoledronic Acid";
+        therapeutic_class="Third-generation bisphosphonate",
+        bioavailability_percent=0.0,  # IV only
+        volume_distribution_l_kg=0.5,
+        protein_binding_percent=56.0,
+        half_life_h=146.0,  # Terminal (bone retention)
+        renal_excretion_percent=100.0,
+        bone_penetration=true,
+        standard_dose_mg=5.0,  # Annual dose
+        dosing_frequency="yearly",
+        local_therapeutic_dose_ug=100.0,
+        local_duration_days=90.0
+    ),
+
+    "teriparatide" => DrugPharmacokinetics(
+        "DB06285", "Teriparatide (PTH 1-34)";
+        therapeutic_class="Parathyroid hormone analog",
+        bioavailability_percent=95.0,  # SC
+        volume_distribution_l_kg=0.12,
+        half_life_h=1.0,
+        clearance_ml_min_kg=14.0,
+        primary_metabolism="Hepatic/renal proteolysis",
+        standard_dose_mg=0.02,  # 20 μg daily
+        dosing_frequency="daily",
+        local_therapeutic_dose_ug=5.0,
+        local_duration_days=28.0
+    ),
+
+    "denosumab" => DrugPharmacokinetics(
+        "DB06643", "Denosumab";
+        therapeutic_class="RANKL inhibitor (monoclonal antibody)",
+        bioavailability_percent=62.0,  # SC
+        volume_distribution_l_kg=0.07,
+        half_life_h=624.0,  # 26 days
+        primary_metabolism="Proteolytic degradation",
+        standard_dose_mg=60.0,
+        dosing_frequency="q6months",
+        local_therapeutic_dose_ug=1000.0,
+        local_duration_days=180.0
+    ),
+
+    # =========================================================================
+    # ANTIMICROBIAL PEPTIDES
+    # =========================================================================
+
+    "LL37" => DrugPharmacokinetics(
+        "LL-37", "Cathelicidin LL-37";
+        therapeutic_class="Antimicrobial peptide",
+        half_life_h=0.5,
+        primary_metabolism="Proteolytic degradation",
+        local_therapeutic_dose_ug=50.0,
+        local_duration_days=7.0
+    ),
+
+    "defensin" => DrugPharmacokinetics(
+        "HBD-3", "Human Beta-Defensin 3";
+        therapeutic_class="Antimicrobial peptide",
+        half_life_h=1.0,
+        primary_metabolism="Proteolytic degradation",
+        local_therapeutic_dose_ug=20.0,
+        local_duration_days=7.0
+    ),
+
+    # =========================================================================
+    # ANTIOXIDANTS / CYTOPROTECTANTS
+    # =========================================================================
+
+    "N_acetylcysteine" => DrugPharmacokinetics(
+        "DB06151", "N-Acetylcysteine";
+        therapeutic_class="Antioxidant/mucolytic",
+        bioavailability_percent=10.0,
+        volume_distribution_l_kg=0.5,
+        protein_binding_percent=50.0,
+        half_life_h=6.0,
+        primary_metabolism="Hepatic (deacetylation)",
+        active_metabolites=["cysteine"],
+        standard_dose_mg=600.0,
+        dosing_frequency="q12h",
+        local_therapeutic_dose_ug=500.0,
+        local_duration_days=14.0
+    ),
+
+    "curcumin" => DrugPharmacokinetics(
+        "DB11672", "Curcumin";
+        therapeutic_class="Natural anti-inflammatory/antioxidant",
+        bioavailability_percent=1.0,  # Very poor
+        volume_distribution_l_kg=2.0,
+        protein_binding_percent=90.0,
+        half_life_h=1.0,
+        primary_metabolism="Hepatic (glucuronidation)",
+        local_therapeutic_dose_ug=100.0,
+        local_duration_days=21.0
+    ),
+
+    "quercetin" => DrugPharmacokinetics(
+        "DB04159", "Quercetin";
+        therapeutic_class="Flavonoid antioxidant",
+        bioavailability_percent=5.0,
+        volume_distribution_l_kg=2.5,
+        protein_binding_percent=99.0,
+        half_life_h=11.0,
+        primary_metabolism="Hepatic (methylation, glucuronidation)",
+        local_therapeutic_dose_ug=50.0,
+        local_duration_days=14.0
+    ),
+
+    # =========================================================================
+    # STATINS (PLEIOTROPIC EFFECTS)
+    # =========================================================================
+
+    "lovastatin" => DrugPharmacokinetics(
+        "DB00227", "Lovastatin";
+        therapeutic_class="HMG-CoA reductase inhibitor",
+        bioavailability_percent=5.0,
+        volume_distribution_l_kg=1.0,
+        protein_binding_percent=95.0,
+        half_life_h=3.0,
+        primary_metabolism="Hepatic (CYP3A4)",
+        cyp_enzymes=["CYP3A4"],
+        active_metabolites=["lovastatin acid"],
+        standard_dose_mg=40.0,
+        dosing_frequency="daily",
+        local_therapeutic_dose_ug=25.0,
+        local_duration_days=28.0
+    ),
+
+    "rosuvastatin" => DrugPharmacokinetics(
+        "DB01098", "Rosuvastatin";
+        therapeutic_class="HMG-CoA reductase inhibitor",
+        bioavailability_percent=20.0,
+        volume_distribution_l_kg=1.3,
+        protein_binding_percent=88.0,
+        half_life_h=19.0,
+        primary_metabolism="Hepatic (CYP2C9)",
+        cyp_enzymes=["CYP2C9"],
+        standard_dose_mg=10.0,
+        dosing_frequency="daily",
+        local_therapeutic_dose_ug=30.0,
+        local_duration_days=28.0
+    ),
+
+    # =========================================================================
+    # ANALGESICS
+    # =========================================================================
+
+    "morphine" => DrugPharmacokinetics(
+        "DB00295", "Morphine";
+        therapeutic_class="Opioid analgesic",
+        bioavailability_percent=25.0,
+        volume_distribution_l_kg=3.5,
+        protein_binding_percent=35.0,
+        half_life_h=2.5,
+        clearance_ml_min_kg=15.0,
+        blood_brain_barrier=true,
+        primary_metabolism="Hepatic (glucuronidation)",
+        active_metabolites=["morphine-6-glucuronide"],
+        therapeutic_range_min=20.0,
+        therapeutic_range_max=70.0,
+        standard_dose_mg=10.0,
+        dosing_frequency="q4h",
+        local_therapeutic_dose_ug=500.0,
+        local_duration_days=3.0
+    ),
+
+    "tramadol" => DrugPharmacokinetics(
+        "DB00193", "Tramadol";
+        therapeutic_class="Atypical opioid analgesic",
+        bioavailability_percent=70.0,
+        volume_distribution_l_kg=2.7,
+        protein_binding_percent=20.0,
+        half_life_h=6.0,
+        clearance_ml_min_kg=6.0,
+        blood_brain_barrier=true,
+        primary_metabolism="Hepatic (CYP2D6, CYP3A4)",
+        cyp_enzymes=["CYP2D6", "CYP3A4"],
+        active_metabolites=["O-desmethyltramadol"],
+        therapeutic_range_min=100.0,
+        therapeutic_range_max=300.0,
+        standard_dose_mg=100.0,
+        dosing_frequency="q6h",
+        local_therapeutic_dose_ug=200.0,
+        local_duration_days=5.0
     )
 )
 
@@ -553,12 +1105,24 @@ const DRUG_PK_DB = Dict{String,DrugPharmacokinetics}(
 # =============================================================================
 
 const THERAPEUTIC_CATEGORIES = Dict{Symbol,Vector{String}}(
-    :antibiotics => ["vancomycin", "gentamicin", "ciprofloxacin", "rifampicin"],
-    :anti_inflammatory => ["dexamethasone", "ibuprofen", "indomethacin"],
-    :osteogenic => ["alendronate", "simvastatin", "rhBMP2"],
-    :chemotherapy => ["doxorubicin", "methotrexate", "paclitaxel"],
+    :antibiotics => ["vancomycin", "gentamicin", "ciprofloxacin", "rifampicin",
+                     "cefazolin", "tobramycin", "clindamycin", "daptomycin",
+                     "linezolid", "azithromycin", "minocycline"],
+    :antimicrobial_peptides => ["LL37", "defensin"],
+    :anti_inflammatory => ["dexamethasone", "ibuprofen", "indomethacin",
+                           "prednisone", "triamcinolone", "celecoxib"],
+    :immunomodulatory => ["tacrolimus"],
+    :osteogenic => ["alendronate", "simvastatin", "rhBMP2", "rhBMP7",
+                    "zoledronic_acid", "teriparatide", "denosumab"],
+    :growth_factors => ["rhBMP2", "rhBMP7", "VEGF", "PDGF_BB", "FGF2",
+                        "TGF_beta1", "IGF1", "NGF", "EGF", "HGF"],
+    :chemotherapy => ["doxorubicin", "methotrexate", "paclitaxel",
+                      "cisplatin", "5_fluorouracil", "gemcitabine", "etoposide"],
     :anesthetic => ["lidocaine", "bupivacaine"],
-    :angiogenic => ["VEGF"]
+    :analgesic => ["morphine", "tramadol"],
+    :angiogenic => ["VEGF", "FGF2", "HGF"],
+    :antioxidant => ["N_acetylcysteine", "curcumin", "quercetin"],
+    :statins => ["simvastatin", "lovastatin", "rosuvastatin"]
 )
 
 # =============================================================================

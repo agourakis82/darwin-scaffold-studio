@@ -882,6 +882,784 @@ const PHYSICAL_DB = Dict{String,PhysicalProperties}(
             density_g_cm3=1.74,
             crystal_structure="Hexagonal close-packed"
         )
+    ),
+
+    # =========================================================================
+    # ADDITIONAL CERAMICS
+    # =========================================================================
+
+    "Zirconia" => PhysicalProperties(
+        "CHEBI:50823", "Yttria-Stabilized Zirconia (3Y-TZP)", :ceramic,
+        MechanicalProperties(
+            elastic_modulus_mpa=210000.0,
+            shear_modulus_mpa=81000.0,
+            poisson_ratio=0.31,
+            tensile_strength_mpa=420.0,
+            compressive_strength_mpa=2000.0,
+            flexural_strength_mpa=1000.0,
+            toughness_kj_m2=8.0,
+            hardness_shore="HV 1200",
+            fatigue_strength_mpa=500.0,
+            wear_resistance="Excellent"
+        ),
+        ThermalProperties(
+            melting_point_c=2715.0,
+            thermal_conductivity_w_mk=2.0,
+            specific_heat_j_gk=0.46,
+            thermal_expansion_ppm_k=10.5
+        ),
+        ElectricalProperties(
+            electrical_resistivity_ohm_m=1e10,
+            is_conductive=false
+        ),
+        OpticalProperties(
+            color="White/ivory",
+            transparency_percent=40.0
+        ),
+        SurfaceProperties(
+            water_contact_angle_deg=70.0,
+            hydrophilicity=:hydrophobic,
+            cell_adhesion="Good"
+        ),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=6.05,
+            crystal_structure="Tetragonal"
+        )
+    ),
+
+    "Alumina" => PhysicalProperties(
+        "CHEBI:30187", "Aluminum Oxide (Al2O3)", :ceramic,
+        MechanicalProperties(
+            elastic_modulus_mpa=380000.0,
+            shear_modulus_mpa=155000.0,
+            poisson_ratio=0.22,
+            tensile_strength_mpa=260.0,
+            compressive_strength_mpa=3000.0,
+            flexural_strength_mpa=380.0,
+            toughness_kj_m2=4.0,
+            hardness_shore="HV 1800",
+            wear_resistance="Excellent"
+        ),
+        ThermalProperties(
+            melting_point_c=2072.0,
+            thermal_conductivity_w_mk=30.0,
+            specific_heat_j_gk=0.88,
+            thermal_expansion_ppm_k=8.0
+        ),
+        ElectricalProperties(
+            electrical_resistivity_ohm_m=1e14,
+            dielectric_constant=9.0,
+            is_conductive=false
+        ),
+        OpticalProperties(
+            color="White",
+            transparency_percent=0.0
+        ),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Moderate"
+        ),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=3.95,
+            crystal_structure="Corundum (hexagonal)"
+        )
+    ),
+
+    "Silicon_Nitride" => PhysicalProperties(
+        "Si3N4", "Silicon Nitride (Si3N4)", :ceramic,
+        MechanicalProperties(
+            elastic_modulus_mpa=310000.0,
+            shear_modulus_mpa=120000.0,
+            poisson_ratio=0.28,
+            tensile_strength_mpa=580.0,
+            compressive_strength_mpa=3500.0,
+            flexural_strength_mpa=850.0,
+            toughness_kj_m2=7.0,
+            hardness_shore="HV 1600",
+            wear_resistance="Excellent"
+        ),
+        ThermalProperties(
+            melting_point_c=1900.0,
+            thermal_conductivity_w_mk=30.0,
+            thermal_expansion_ppm_k=3.2
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(color="Gray"),
+        SurfaceProperties(
+            cell_adhesion="Good"
+        ),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=3.2,
+            crystal_structure="Hexagonal"
+        )
+    ),
+
+    "Wollastonite" => PhysicalProperties(
+        "CHEBI:52252", "Calcium Silicate (CaSiO3)", :ceramic,
+        MechanicalProperties(
+            elastic_modulus_mpa=120000.0,
+            compressive_strength_mpa=150.0,
+            flexural_strength_mpa=80.0,
+            toughness_kj_m2=1.5
+        ),
+        ThermalProperties(
+            melting_point_c=1540.0,
+            thermal_conductivity_w_mk=2.5
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(color="White"),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Good"
+        ),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=2.9,
+            crystal_structure="Triclinic"
+        )
+    ),
+
+    "BCP" => PhysicalProperties(
+        "BCP", "Biphasic Calcium Phosphate (60/40 HA/TCP)", :ceramic,
+        MechanicalProperties(
+            elastic_modulus_mpa=30000.0,
+            compressive_strength_mpa=60.0,
+            flexural_strength_mpa=30.0,
+            toughness_kj_m2=1.0
+        ),
+        ThermalProperties(
+            decomposition_temp_c=1200.0,
+            thermal_conductivity_w_mk=1.3
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(color="White"),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Excellent"
+        ),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=3.0,
+            surface_area_m2_g=60.0
+        )
+    ),
+
+    "Akermanite" => PhysicalProperties(
+        "Akermanite", "Ca2MgSi2O7", :ceramic,
+        MechanicalProperties(
+            elastic_modulus_mpa=100000.0,
+            compressive_strength_mpa=200.0,
+            flexural_strength_mpa=120.0,
+            toughness_kj_m2=2.0
+        ),
+        ThermalProperties(
+            melting_point_c=1454.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(color="White"),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Excellent"
+        ),
+        RheologicalProperties(),
+        StructuralProperties(density_g_cm3=2.94)
+    ),
+
+    # =========================================================================
+    # ADDITIONAL METALS & ALLOYS
+    # =========================================================================
+
+    "CoCrMo" => PhysicalProperties(
+        "CoCrMo", "Cobalt-Chromium-Molybdenum Alloy", :metal,
+        MechanicalProperties(
+            elastic_modulus_mpa=230000.0,
+            shear_modulus_mpa=88000.0,
+            poisson_ratio=0.30,
+            tensile_strength_mpa=1000.0,
+            yield_strength_mpa=650.0,
+            elongation_percent=12.0,
+            hardness_shore="HRC 40",
+            fatigue_strength_mpa=500.0,
+            wear_resistance="Excellent"
+        ),
+        ThermalProperties(
+            melting_point_c=1330.0,
+            thermal_conductivity_w_mk=14.8,
+            thermal_expansion_ppm_k=12.5
+        ),
+        ElectricalProperties(
+            electrical_resistivity_ohm_m=9.4e-7,
+            is_conductive=true
+        ),
+        OpticalProperties(color="Silver"),
+        SurfaceProperties(cell_adhesion="Moderate"),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=8.3,
+            crystal_structure="Face-centered cubic"
+        )
+    ),
+
+    "NiTi" => PhysicalProperties(
+        "NiTi", "Nitinol (Shape Memory Alloy)", :metal,
+        MechanicalProperties(
+            elastic_modulus_mpa=83000.0,  # Austenite
+            tensile_strength_mpa=900.0,
+            yield_strength_mpa=500.0,
+            elongation_percent=20.0,
+            hardness_shore="HRC 35"
+        ),
+        ThermalProperties(
+            melting_point_c=1310.0,
+            thermal_conductivity_w_mk=18.0,
+            thermal_expansion_ppm_k=11.0
+        ),
+        ElectricalProperties(is_conductive=true),
+        OpticalProperties(color="Silver-gray"),
+        SurfaceProperties(cell_adhesion="Moderate"),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=6.45,
+            crystal_structure="Austenite (cubic) / Martensite (monoclinic)"
+        )
+    ),
+
+    "Tantalum" => PhysicalProperties(
+        "CHEBI:33348", "Tantalum", :metal,
+        MechanicalProperties(
+            elastic_modulus_mpa=186000.0,
+            shear_modulus_mpa=69000.0,
+            poisson_ratio=0.35,
+            tensile_strength_mpa=285.0,
+            yield_strength_mpa=165.0,
+            elongation_percent=35.0,
+            hardness_shore="HV 120"
+        ),
+        ThermalProperties(
+            melting_point_c=3017.0,
+            thermal_conductivity_w_mk=57.5,
+            thermal_expansion_ppm_k=6.5
+        ),
+        ElectricalProperties(
+            electrical_resistivity_ohm_m=1.3e-7,
+            is_conductive=true
+        ),
+        OpticalProperties(color="Gray-blue"),
+        SurfaceProperties(
+            cell_adhesion="Excellent"
+        ),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=16.6,
+            crystal_structure="Body-centered cubic"
+        )
+    ),
+
+    "Mg_AZ31" => PhysicalProperties(
+        "Mg_AZ31", "Magnesium Alloy AZ31", :metal,
+        MechanicalProperties(
+            elastic_modulus_mpa=45000.0,
+            tensile_strength_mpa=260.0,
+            yield_strength_mpa=200.0,
+            elongation_percent=15.0,
+            hardness_shore="HV 55"
+        ),
+        ThermalProperties(
+            melting_point_c=630.0,
+            thermal_conductivity_w_mk=96.0,
+            thermal_expansion_ppm_k=26.0
+        ),
+        ElectricalProperties(is_conductive=true),
+        OpticalProperties(color="Silver"),
+        SurfaceProperties(cell_adhesion="Good"),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=1.77,
+            crystal_structure="Hexagonal close-packed"
+        )
+    ),
+
+    "Zinc" => PhysicalProperties(
+        "CHEBI:27363", "Zinc (Biodegradable)", :metal,
+        MechanicalProperties(
+            elastic_modulus_mpa=108000.0,
+            tensile_strength_mpa=130.0,
+            yield_strength_mpa=100.0,
+            elongation_percent=35.0,
+            hardness_shore="HV 30"
+        ),
+        ThermalProperties(
+            melting_point_c=420.0,
+            thermal_conductivity_w_mk=116.0,
+            thermal_expansion_ppm_k=30.0
+        ),
+        ElectricalProperties(is_conductive=true),
+        OpticalProperties(color="Blue-gray"),
+        SurfaceProperties(cell_adhesion="Good"),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=7.14,
+            crystal_structure="Hexagonal close-packed"
+        )
+    ),
+
+    # =========================================================================
+    # COMPOSITES
+    # =========================================================================
+
+    "PCL_HA" => PhysicalProperties(
+        "PCL_HA", "PCL/Hydroxyapatite Composite (80/20)", :composite,
+        MechanicalProperties(
+            elastic_modulus_mpa=800.0,  # Enhanced by HA
+            tensile_strength_mpa=20.0,
+            compressive_strength_mpa=30.0,
+            elongation_percent=200.0,
+            toughness_kj_m2=25.0
+        ),
+        ThermalProperties(
+            melting_point_c=58.0,
+            glass_transition_c=-60.0,
+            max_service_temp_c=50.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(color="White"),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Excellent"
+        ),
+        RheologicalProperties(
+            viscosity_pa_s=150.0
+        ),
+        StructuralProperties(
+            density_g_cm3=1.4
+        )
+    ),
+
+    "PLGA_TCP" => PhysicalProperties(
+        "PLGA_TCP", "PLGA/TCP Composite (70/30)", :composite,
+        MechanicalProperties(
+            elastic_modulus_mpa=2500.0,
+            tensile_strength_mpa=35.0,
+            compressive_strength_mpa=50.0,
+            flexural_modulus_mpa=2200.0
+        ),
+        ThermalProperties(
+            glass_transition_c=48.0,
+            decomposition_temp_c=280.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(color="White"),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Excellent"
+        ),
+        RheologicalProperties(),
+        StructuralProperties(density_g_cm3=1.6)
+    ),
+
+    "Collagen_HA" => PhysicalProperties(
+        "Collagen_HA", "Collagen/Hydroxyapatite Composite", :composite,
+        MechanicalProperties(
+            elastic_modulus_mpa=50.0,
+            tensile_strength_mpa=5.0,
+            compressive_strength_mpa=10.0
+        ),
+        ThermalProperties(
+            decomposition_temp_c=150.0
+        ),
+        ElectricalProperties(is_conductive=false, is_piezoelectric=true),
+        OpticalProperties(color="White"),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Excellent"
+        ),
+        RheologicalProperties(),
+        StructuralProperties(density_g_cm3=1.5)
+    ),
+
+    "GelMA_nHA" => PhysicalProperties(
+        "GelMA_nHA", "GelMA/nano-Hydroxyapatite Bioink", :composite,
+        MechanicalProperties(
+            elastic_modulus_mpa=0.1,  # 100 kPa
+            compressive_strength_mpa=0.2
+        ),
+        ThermalProperties(
+            max_service_temp_c=37.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(transparency_percent=60.0),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Excellent"
+        ),
+        RheologicalProperties(
+            storage_modulus_pa=8000.0,
+            loss_modulus_pa=800.0,
+            gelation_time_min=1.5,
+            gel_point_temp_c=25.0,
+            shear_thinning=true
+        ),
+        StructuralProperties(
+            density_g_cm3=1.1,
+            water_absorption_percent=800.0
+        )
+    ),
+
+    "PEEK_CFR" => PhysicalProperties(
+        "PEEK_CFR", "Carbon Fiber Reinforced PEEK", :composite,
+        MechanicalProperties(
+            elastic_modulus_mpa=18000.0,
+            tensile_strength_mpa=280.0,
+            compressive_strength_mpa=350.0,
+            flexural_modulus_mpa=15000.0,
+            elongation_percent=1.5,
+            hardness_shore="Shore D 90",
+            fatigue_strength_mpa=150.0,
+            wear_resistance="Excellent"
+        ),
+        ThermalProperties(
+            melting_point_c=343.0,
+            glass_transition_c=143.0,
+            max_service_temp_c=260.0,
+            thermal_conductivity_w_mk=0.95
+        ),
+        ElectricalProperties(
+            is_conductive=true  # Due to carbon fibers
+        ),
+        OpticalProperties(color="Black"),
+        SurfaceProperties(cell_adhesion="Moderate"),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=1.45
+        )
+    ),
+
+    "Silk_HA" => PhysicalProperties(
+        "Silk_HA", "Silk Fibroin/Hydroxyapatite Composite", :composite,
+        MechanicalProperties(
+            elastic_modulus_mpa=100.0,
+            tensile_strength_mpa=10.0,
+            compressive_strength_mpa=15.0,
+            elongation_percent=5.0
+        ),
+        ThermalProperties(
+            decomposition_temp_c=250.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(color="White/cream"),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Excellent"
+        ),
+        RheologicalProperties(),
+        StructuralProperties(density_g_cm3=1.4)
+    ),
+
+    "PCL_Graphene" => PhysicalProperties(
+        "PCL_Graphene", "PCL/Graphene Conductive Composite", :composite,
+        MechanicalProperties(
+            elastic_modulus_mpa=600.0,
+            tensile_strength_mpa=30.0,
+            elongation_percent=400.0
+        ),
+        ThermalProperties(
+            melting_point_c=60.0,
+            thermal_conductivity_w_mk=1.5
+        ),
+        ElectricalProperties(
+            electrical_conductivity_s_m=100.0,
+            is_conductive=true
+        ),
+        OpticalProperties(color="Black"),
+        SurfaceProperties(cell_adhesion="Good"),
+        RheologicalProperties(),
+        StructuralProperties(density_g_cm3=1.2)
+    ),
+
+    # =========================================================================
+    # NATURAL POLYMERS (ADDITIONAL)
+    # =========================================================================
+
+    "Silk_Fibroin" => PhysicalProperties(
+        "CHEBI:17039", "Silk Fibroin", :polymer,
+        MechanicalProperties(
+            elastic_modulus_mpa=10000.0,
+            tensile_strength_mpa=600.0,
+            elongation_percent=20.0,
+            toughness_kj_m2=70.0
+        ),
+        ThermalProperties(
+            decomposition_temp_c=250.0,
+            glass_transition_c=178.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(
+            transparency_percent=90.0,
+            color="White/cream"
+        ),
+        SurfaceProperties(
+            water_contact_angle_deg=60.0,
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Excellent"
+        ),
+        RheologicalProperties(
+            viscosity_pa_s=0.5,
+            shear_thinning=true
+        ),
+        StructuralProperties(
+            density_g_cm3=1.35,
+            crystallinity_percent=50.0
+        )
+    ),
+
+    "Fibrin" => PhysicalProperties(
+        "CHEBI:5054", "Fibrin Gel", :hydrogel,
+        MechanicalProperties(
+            elastic_modulus_mpa=0.005,  # 5 kPa
+            tensile_strength_mpa=0.01,
+            elongation_percent=100.0
+        ),
+        ThermalProperties(
+            decomposition_temp_c=100.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(
+            transparency_percent=80.0,
+            color="White/translucent"
+        ),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Excellent"
+        ),
+        RheologicalProperties(
+            gelation_time_min=5.0,
+            gel_point_temp_c=37.0
+        ),
+        StructuralProperties(
+            density_g_cm3=1.05,
+            water_absorption_percent=2000.0
+        )
+    ),
+
+    "Matrigel" => PhysicalProperties(
+        "Matrigel", "Matrigel (Basement Membrane Extract)", :hydrogel,
+        MechanicalProperties(
+            elastic_modulus_mpa=0.0005  # 0.5 kPa - very soft
+        ),
+        ThermalProperties(
+            max_service_temp_c=37.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(
+            transparency_percent=95.0,
+            color="Colorless"
+        ),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Excellent",
+            functional_groups_available=["laminin", "collagen IV", "entactin"]
+        ),
+        RheologicalProperties(
+            gelation_time_min=30.0,
+            gel_point_temp_c=10.0  # Gels above this temp
+        ),
+        StructuralProperties(
+            water_absorption_percent=5000.0
+        )
+    ),
+
+    "Agarose" => PhysicalProperties(
+        "CHEBI:2511", "Agarose", :hydrogel,
+        MechanicalProperties(
+            elastic_modulus_mpa=0.1,  # 100 kPa at 2%
+            compressive_strength_mpa=0.5
+        ),
+        ThermalProperties(
+            melting_point_c=85.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(
+            transparency_percent=95.0,
+            color="Colorless"
+        ),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Poor"  # No cell binding sites
+        ),
+        RheologicalProperties(
+            gelation_time_min=10.0,
+            gel_point_temp_c=35.0,
+            swelling_ratio=50.0
+        ),
+        StructuralProperties(
+            density_g_cm3=1.64,
+            water_absorption_percent=500.0
+        )
+    ),
+
+    # =========================================================================
+    # SYNTHETIC POLYMERS (ADDITIONAL)
+    # =========================================================================
+
+    "PEEK" => PhysicalProperties(
+        "CHEBI:53426", "Polyether Ether Ketone", :polymer,
+        MechanicalProperties(
+            elastic_modulus_mpa=3600.0,
+            shear_modulus_mpa=1300.0,
+            poisson_ratio=0.38,
+            tensile_strength_mpa=100.0,
+            yield_strength_mpa=95.0,
+            compressive_strength_mpa=120.0,
+            flexural_modulus_mpa=4100.0,
+            elongation_percent=45.0,
+            hardness_shore="Shore D 85",
+            fatigue_strength_mpa=40.0,
+            wear_resistance="Excellent"
+        ),
+        ThermalProperties(
+            melting_point_c=343.0,
+            glass_transition_c=143.0,
+            decomposition_temp_c=550.0,
+            max_service_temp_c=260.0,
+            thermal_conductivity_w_mk=0.25,
+            thermal_expansion_ppm_k=47.0
+        ),
+        ElectricalProperties(
+            electrical_resistivity_ohm_m=1e14,
+            dielectric_constant=3.2,
+            is_conductive=false
+        ),
+        OpticalProperties(color="Tan/beige"),
+        SurfaceProperties(
+            water_contact_angle_deg=80.0,
+            hydrophilicity=:hydrophobic,
+            cell_adhesion="Moderate"
+        ),
+        RheologicalProperties(
+            melt_flow_index_g_10min=3.0
+        ),
+        StructuralProperties(
+            density_g_cm3=1.32,
+            crystallinity_percent=35.0
+        )
+    ),
+
+    "PLLA" => PhysicalProperties(
+        "CHEBI:53381", "Poly-L-Lactic Acid", :polymer,
+        MechanicalProperties(
+            elastic_modulus_mpa=4000.0,
+            tensile_strength_mpa=65.0,
+            yield_strength_mpa=50.0,
+            flexural_modulus_mpa=4500.0,
+            elongation_percent=4.0,
+            hardness_shore="Shore D 85"
+        ),
+        ThermalProperties(
+            melting_point_c=175.0,
+            glass_transition_c=60.0,
+            decomposition_temp_c=300.0
+        ),
+        ElectricalProperties(is_conductive=false, is_piezoelectric=true),
+        OpticalProperties(
+            transparency_percent=90.0,
+            color="Transparent"
+        ),
+        SurfaceProperties(
+            water_contact_angle_deg=75.0,
+            hydrophilicity=:hydrophobic,
+            cell_adhesion="Moderate"
+        ),
+        RheologicalProperties(
+            melt_flow_index_g_10min=2.0
+        ),
+        StructuralProperties(
+            density_g_cm3=1.25,
+            crystallinity_percent=40.0
+        )
+    ),
+
+    "PEG" => PhysicalProperties(
+        "CHEBI:46793", "Polyethylene Glycol", :polymer,
+        MechanicalProperties(
+            elastic_modulus_mpa=0.01  # Very soft hydrogel
+        ),
+        ThermalProperties(
+            melting_point_c=65.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(
+            transparency_percent=100.0,
+            color="Colorless"
+        ),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Poor",  # Anti-fouling
+            protein_adsorption="Low"
+        ),
+        RheologicalProperties(
+            viscosity_pa_s=0.05
+        ),
+        StructuralProperties(
+            density_g_cm3=1.13,
+            water_absorption_percent=1000.0
+        )
+    ),
+
+    "PU" => PhysicalProperties(
+        "CHEBI:53376", "Polyurethane (Medical Grade)", :polymer,
+        MechanicalProperties(
+            elastic_modulus_mpa=25.0,  # Flexible grade
+            tensile_strength_mpa=40.0,
+            elongation_percent=600.0,
+            hardness_shore="Shore A 80"
+        ),
+        ThermalProperties(
+            melting_point_c=180.0,
+            glass_transition_c=-40.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(color="Clear to amber"),
+        SurfaceProperties(
+            water_contact_angle_deg=85.0,
+            cell_adhesion="Good"
+        ),
+        RheologicalProperties(),
+        StructuralProperties(
+            density_g_cm3=1.2
+        )
+    ),
+
+    "PVA" => PhysicalProperties(
+        "CHEBI:53340", "Polyvinyl Alcohol", :polymer,
+        MechanicalProperties(
+            elastic_modulus_mpa=50.0,
+            tensile_strength_mpa=80.0,
+            elongation_percent=200.0
+        ),
+        ThermalProperties(
+            melting_point_c=230.0,
+            glass_transition_c=85.0
+        ),
+        ElectricalProperties(is_conductive=false),
+        OpticalProperties(
+            transparency_percent=95.0,
+            color="Colorless"
+        ),
+        SurfaceProperties(
+            hydrophilicity=:hydrophilic,
+            cell_adhesion="Poor"
+        ),
+        RheologicalProperties(
+            viscosity_pa_s=0.5
+        ),
+        StructuralProperties(
+            density_g_cm3=1.19,
+            crystallinity_percent=50.0,
+            water_absorption_percent=100.0
+        )
     )
 )
 
