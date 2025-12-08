@@ -35,6 +35,7 @@ include("DarwinScaffoldStudio/Optimization/BayesianOptimization.jl")
 
 # Visualization modules (Core functionality)
 include("DarwinScaffoldStudio/Visualization/Mesh3D.jl")
+include("DarwinScaffoldStudio/Visualization/MarchingCubes.jl")
 include("DarwinScaffoldStudio/Visualization/Export.jl")
 
 # Scientific modules (Thesis - Core functionality)
@@ -167,7 +168,16 @@ if SYSTEM_CONFIG.enable_visualization
     @safe_include "DarwinScaffoldStudio/Science/FractalVascularization.jl" "FractalVascularization"
     @safe_include "DarwinScaffoldStudio/Science/BiomimeticPatterns.jl" "BiomimeticPatterns"
     @safe_include "DarwinScaffoldStudio/Vision/SEMCellIdentification.jl" "SEMCellIdentification"
+    @safe_include "DarwinScaffoldStudio/Vision/SEM3DReconstruction.jl" "SEM3DReconstruction"
 end
+
+# FABRICATION: G-Code Generation for Bioprinting
+@info "Loading Fabrication layer (GCodeGenerator)..."
+@safe_include "DarwinScaffoldStudio/Fabrication/GCodeGenerator.jl" "GCodeGenerator"
+
+# VALIDATION: Benchmark against ImageJ/CTAn
+@info "Loading Validation layer (ValidationBenchmark)..."
+@safe_include "DarwinScaffoldStudio/Validation/ValidationBenchmark.jl" "ValidationBenchmark"
 
 # FRONTIER BEYOND: Advanced Technologies (Optional - disabled by default)
 if SYSTEM_CONFIG.enable_advanced_modules
@@ -238,6 +248,7 @@ using .Segmentation: segment_scaffold
 using .Metrics: compute_metrics
 using .ScaffoldOptimizer: Optimizer, optimize_scaffold, detect_problems
 using .Mesh3D: create_mesh, create_mesh_simple
+using .MarchingCubes: march_cubes, extract_isosurface, MarchingCubesResult
 using .Export: export_stl, export_stl_from_binary
 using .Topology: compute_kec_metrics
 using .Percolation: compute_percolation_metrics
@@ -266,6 +277,10 @@ export
     create_mesh_simple,
     export_stl,
     export_stl_from_binary,
+    # Marching Cubes (real mesh generation)
+    march_cubes,
+    extract_isosurface,
+    MarchingCubesResult,
     # Core
     ScaffoldConfig,
     get_config,
