@@ -311,7 +311,7 @@ function generate_synthetic_scaffold(
     pore_size_um::Float64=150.0
 )
     @info "Generating synthetic scaffold..."
-    @info "  Size: $size³ voxels"
+    @info "  Size: $(size)^3 voxels"
     @info "  Target porosity: $(porosity * 100)%"
     @info "  Target pore size: $pore_size_um μm"
 

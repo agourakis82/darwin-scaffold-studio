@@ -1,0 +1,8 @@
+{
+    "name": "synthetic_scaffold",
+    "dimensions": [100, 100, 100],
+    "voxel_size_um": 10.0,
+    "format": "uint8_binary",
+    "actual_porosity": 0.49119100000000004,
+    "target_pore_size_um": 250.0
+}
