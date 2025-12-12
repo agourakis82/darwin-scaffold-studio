@@ -1,52 +1,66 @@
 # Darwin Scaffold Studio Documentation
 
-Welcome to the Darwin Scaffold Studio documentation.
+## Overview
 
-## Getting Started
+Darwin Scaffold Studio is a computational platform for tissue engineering scaffold analysis, featuring image processing, topological analysis, and scientific discovery capabilities.
 
-- [Tutorial](guides/tutorial.md) - Complete end-to-end workflow for scaffold analysis
-- [Quick Start](../QUICKSTART.md) - Get up and running in 5 minutes
+---
 
-## Reference
+## Documentation Map
 
-- [API Reference](reference/api.md) - Complete function documentation
-- [Materials Database](reference/EXTENDED_MATERIALS_REFERENCE.md) - Biomaterial properties
+### Core Documentation
 
-## Architecture
+| Document | Description |
+|----------|-------------|
+| [MANUAL.md](../MANUAL.md) | **Complete scientific and software manual** |
+| [QUICKSTART.md](../QUICKSTART.md) | Getting started in 5 minutes |
+| [README.md](../README.md) | Project overview |
 
-- [System Architecture](architecture/ARCHITECTURE.md) - Module structure and design
-- [Agent System](agents/DARWIN_AGENTS.md) - AI agent documentation
+### Scientific
 
-## Development
+| Document | Description |
+|----------|-------------|
+| [NOVEL_PHYSICS_METHODOLOGY.md](NOVEL_PHYSICS_METHODOLOGY.md) | Entropic causality discovery methodology |
+| [SCIENTIFIC_POSITIONING_DEEP_RESEARCH.md](SCIENTIFIC_POSITIONING_DEEP_RESEARCH.md) | Literature review and positioning |
+| [PLDLA_RESEARCH_QUESTIONS_ANALYSIS.md](PLDLA_RESEARCH_QUESTIONS_ANALYSIS.md) | PLDLA polymer research analysis |
+| [MANUAL_COMPLETO_PIPELINE.md](MANUAL_COMPLETO_PIPELINE.md) | Complete pipeline documentation |
 
-- [Contributing Guide](development/CONTRIBUTING.md) - How to contribute
-- [Deployment](deployment/CLUSTER_SETUP.md) - Cluster deployment guide
+### Technical
 
-## Internal
+| Document | Description |
+|----------|-------------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture and module design |
+| [SOTA_COMPARISON.md](SOTA_COMPARISON.md) | State-of-the-art comparison |
+| [MICROCT_DATASETS_CATALOG.md](MICROCT_DATASETS_CATALOG.md) | Available datasets catalog |
 
-- [Release Checklist](internal/CHECKLIST_RELEASE.md)
-- [Zenodo Workflow](internal/ZENODO_GITHUB_WORKFLOW.md)
+### Subdirectories
+
+| Directory | Contents |
+|-----------|----------|
+| [api/](api/) | API documentation |
+| [guides/](guides/) | Usage tutorials |
+| [reference/](reference/) | Reference materials |
+| [development/](development/) | Contributing guidelines |
+| [validation/](validation/) | Validation reports |
 
 ---
 
 ## Quick Links
 
-| Resource | Description |
-|----------|-------------|
-| [GitHub Repository](https://github.com/agourakis82/darwin-scaffold-studio) | Source code |
-| [Issue Tracker](https://github.com/agourakis82/darwin-scaffold-studio/issues) | Report bugs |
-| [Releases](https://github.com/agourakis82/darwin-scaffold-studio/releases) | Download releases |
+- [GitHub Repository](https://github.com/agourakis82/darwin-scaffold-studio)
+- [Issue Tracker](https://github.com/agourakis82/darwin-scaffold-studio/issues)
+- [Releases](https://github.com/agourakis82/darwin-scaffold-studio/releases)
+
+---
 
 ## Citation
 
-If you use Darwin Scaffold Studio in your research, please cite:
-
 ```bibtex
 @software{darwin_scaffold_studio,
-  author = {Agourakis, Demetrios},
-  title = {Darwin Scaffold Studio: Computational Platform for Tissue Engineering},
-  year = {2024},
-  url = {https://github.com/agourakis82/darwin-scaffold-studio},
-  version = {0.2.1}
+  author = {Agourakis, Demetrios Chiuratto},
+  title = {Darwin Scaffold Studio},
+  year = {2025},
+  doi = {10.5281/zenodo.17832882},
+  url = {https://github.com/agourakis82/darwin-scaffold-studio}
 }
 ```
