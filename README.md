@@ -20,6 +20,9 @@
   <a href="https://www.julia-lang.org/">
     <img src="https://img.shields.io/badge/Julia-1.10+-9558B2.svg?logo=julia" alt="Julia 1.10+">
   </a>
+  <a href="https://doi.org/10.5281/zenodo.17920688">
+    <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.17920688.svg" alt="DOI">
+  </a>
 </p>
 
 <p align="center">
@@ -57,7 +60,7 @@ C = Omega^(-lambda)    where lambda = ln(2)/d
 This connects information theory, random walk theory, and polymer physics through a single dimensionless law.
 
 **Publications:**
-- `paper/entropic_causality_manuscript_v2.md` - Nature Communications format
+- [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17920688.svg)](https://doi.org/10.5281/zenodo.17920688) Entropic Causality Preprint
 - `paper/softwarex_paper_v2.pdf` - Software description (SoftwareX)
 
 See [`MANUAL.md`](MANUAL.md) for complete scientific derivation.
@@ -176,12 +179,14 @@ darwin-scaffold-studio/
 For the entropic causality discovery:
 ```bibtex
 @article{agourakis2025entropic,
-  title = {Entropic Causality: A Universal Law Connecting 
-           Information Theory and Polymer Degradation},
-  author = {Agourakis, D. C.},
-  journal = {Nature Communications},
+  title = {Dimensional Universality of Entropic Causality in Polymer
+           Degradation: Connecting Information Theory, Random Walks,
+           and Molecular Disorder},
+  author = {Agourakis, Demetrios},
   year = {2025},
-  note = {In preparation}
+  doi = {10.5281/zenodo.17920688},
+  url = {https://doi.org/10.5281/zenodo.17920688},
+  publisher = {Zenodo}
 }
 ```
 
