@@ -43,11 +43,13 @@ using DarwinScaffoldStudio
         @test params.volume_mm3 == (5.0, 5.0, 5.0)
     end
 
-    @testset "GlobalConfig" begin
+    @testset "ScaffoldConfig" begin
+        # get_config returns a ScaffoldConfig struct
         config = get_config()
 
-        @test haskey(config, :enable_gpu)
-        @test haskey(config, :default_voxel_size)
+        @test config !== nothing
+        @test config.voxel_size_um > 0.0
+        @test 0.0 <= config.porosity_target <= 1.0
     end
 end
 
