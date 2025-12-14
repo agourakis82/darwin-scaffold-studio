@@ -8,10 +8,11 @@ FROM julia:1.10-bullseye AS builder
 
 WORKDIR /app
 
-# Copy project files first (for caching)
+# Copy project files and source (needed for precompilation)
 COPY Project.toml Manifest.toml ./
+COPY src/ ./src/
 
-# Install dependencies
+# Install and precompile dependencies
 RUN julia --project=. -e '\
     using Pkg; \
     Pkg.instantiate(); \
