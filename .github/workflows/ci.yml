@@ -89,7 +89,7 @@ jobs:
                       ${{ runner.os }}-julia-
 
             - name: Install dependencies
-              run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+              run: julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.add("Coverage")'
 
             - name: Measure code coverage
               run: julia --project=. test/measure_coverage.jl
