@@ -941,22 +941,237 @@ function generate_recommendations(metrics::Dict, targets::Dict)
 end
 
 function chat_with_agent(agent_type::String, message::String, context::Dict)
-    # This would call the actual Agent modules
-    # Stub response
-    return Dict(
-        "text" => "Based on your scaffold design, I recommend optimizing the porosity to 85% for better cell infiltration. The current pore size is within the optimal range.",
-        "suggestions" => ["Optimize scaffold", "Export STL", "Run validation"]
-    )
+    try
+        # Create Ollama model connection
+        model = DarwinScaffoldStudio.OllamaClient.OllamaModel("qwen2.5:7b")
+
+        # Build context-aware system prompt
+        system_prompt = build_agent_system_prompt(agent_type, context)
+
+        # Build messages for chat
+        messages = [
+            Dict("role" => "system", "content" => system_prompt),
+            Dict("role" => "user", "content" => message)
+        ]
+
+        # Call Ollama chat
+        response = DarwinScaffoldStudio.OllamaClient.chat(model, messages)
+
+        # Extract text from response
+        response_text = get(response, "content", "I apologize, I couldn't generate a response.")
+
+        # Generate suggestions based on agent type and response
+        suggestions = generate_agent_suggestions(agent_type, message, response_text)
+
+        return Dict(
+            "text" => response_text,
+            "suggestions" => suggestions
+        )
+    catch e
+        @error "Ollama chat failed" exception=(e, catch_backtrace())
+        return Dict(
+            "text" => "I'm having trouble connecting to the AI backend. Please ensure Ollama is running with 'ollama serve'.",
+            "suggestions" => ["Check Ollama status", "Retry"]
+        )
+    end
+end
+
+function build_agent_system_prompt(agent_type::String, context::Dict)
+    base_context = """
+    Current scaffold context:
+    - Material: $(get(context, "material", "Not specified"))
+    - Target tissue: $(get(context, "tissue", "Not specified"))
+    - Workspace ID: $(get(context, "workspace_id", "None"))
+    """
+
+    if haskey(context, "metrics") && !isnothing(context["metrics"])
+        metrics = context["metrics"]
+        base_context *= """
+
+    Current metrics:
+    - Porosity: $(get(metrics, "porosity", "N/A"))
+    - Pore size: $(get(metrics, "pore_size", "N/A"))um
+    - Interconnectivity: $(get(metrics, "interconnectivity", "N/A"))
+    """
+    end
+
+    if agent_type == "design"
+        return """
+        You are a Design Assistant specialized in tissue engineering scaffold design and optimization.
+        You help researchers create optimal scaffold structures using TPMS surfaces, parametric design,
+        and multi-objective optimization.
+
+        Key expertise:
+        - TPMS surfaces (Gyroid, Diamond, Schwarz P, Neovius, I-WP, Fischer-Koch S)
+        - Porosity optimization (typically 60-90% for tissue engineering)
+        - Pore size optimization (100-500um depending on tissue type)
+        - Mechanical property prediction using Gibson-Ashby model
+
+        $(base_context)
+
+        Provide scientifically rigorous but practical advice. Reference literature when relevant.
+        Keep responses concise and actionable.
+        """
+    elseif agent_type == "analysis"
+        return """
+        You are an Analysis Expert specialized in scaffold characterization and validation.
+        You help researchers analyze scaffold metrics against Q1 literature targets and identify
+        areas for improvement.
+
+        Key expertise:
+        - Porosity analysis (optimal: 60-95% depending on application)
+        - Pore size distribution (bone: 100-300um, cartilage: 200-500um)
+        - Interconnectivity analysis (target: >90%)
+        - Mechanical property analysis (Young's modulus, compressive strength)
+        - Literature validation against Murphy 2010, Karageorgiou 2005, Gibson-Ashby model
+
+        $(base_context)
+
+        Provide detailed analysis with specific numbers and comparisons to literature targets.
+        Highlight both strengths and areas needing improvement.
+        """
+    elseif agent_type == "synthesis"
+        return """
+        You are a Synthesis Guide specialized in scaffold fabrication methods and bioprinting.
+        You help researchers translate designs into manufacturable scaffolds using various
+        fabrication techniques.
+
+        Key expertise:
+        - 3D Bioprinting (FDM, SLA, DLP)
+        - Freeze casting / ice templating
+        - Salt leaching and porogen techniques
+        - Electrospinning for nano-fibrous scaffolds
+        - Material selection (PCL, PLA, PLGA, hydrogels, bioceramics)
+        - G-code generation and printer parameter optimization
+
+        $(base_context)
+
+        Provide practical fabrication advice with specific printer settings when relevant.
+        Consider material properties, resolution limits, and post-processing steps.
+        """
+    else
+        return """
+        You are a helpful assistant for tissue engineering scaffold research.
+        $(base_context)
+        """
+    end
+end
+
+function generate_agent_suggestions(agent_type::String, message::String, response::String)
+    # Generate contextual suggestions based on agent type and conversation
+    if agent_type == "design"
+        return [
+            "Optimize for bone regeneration",
+            "Generate gyroid scaffold",
+            "Adjust porosity",
+            "Export current design"
+        ]
+    elseif agent_type == "analysis"
+        return [
+            "Run Q1 validation",
+            "Compare to literature",
+            "Analyze pore distribution",
+            "Check mechanical properties"
+        ]
+    elseif agent_type == "synthesis"
+        return [
+            "Generate G-code",
+            "Recommend print settings",
+            "Select material",
+            "Estimate print time"
+        ]
+    else
+        return ["Ask follow-up question", "Export scaffold", "Run analysis"]
+    end
 end
 
 function text_to_scaffold(prompt::String, constraints::Dict)
-    # This would call the TextToScaffold module
-    # Stub response
-    volume = generate_tpms_scaffold(:gyroid, 0.85, 2.0, 64, 0.0)
-    return Dict(
-        "volume" => volume,
-        "explanation" => "Generated a gyroid scaffold with 85% porosity optimized for bone tissue engineering."
-    )
+    try
+        # Use Ollama to interpret the prompt and extract scaffold parameters
+        model = DarwinScaffoldStudio.OllamaClient.OllamaModel("qwen2.5:7b")
+
+        system_prompt = """
+        You are a scaffold parameter extractor. Given a natural language description of a tissue engineering scaffold,
+        extract the following parameters as JSON:
+        {
+            "surface_type": "gyroid|diamond|schwarz_p|neovius|iwp|fks",
+            "porosity": 0.0-1.0,
+            "unit_cell_size": 1.0-5.0 (mm),
+            "resolution": 32|64|128,
+            "explanation": "Brief explanation of choices"
+        }
+
+        Guidelines:
+        - Default surface: gyroid (most versatile)
+        - Bone scaffolds: porosity 0.7-0.85, pore size ~300um
+        - Cartilage: porosity 0.8-0.9, pore size ~400um
+        - If gradient mentioned, note in explanation but use middle porosity
+
+        Respond ONLY with valid JSON, no markdown formatting.
+        """
+
+        messages = [
+            Dict("role" => "system", "content" => system_prompt),
+            Dict("role" => "user", "content" => prompt)
+        ]
+
+        response = DarwinScaffoldStudio.OllamaClient.chat(model, messages)
+        response_text = get(response, "content", "{}")
+
+        # Parse the LLM response
+        params = try
+            JSON.parse(response_text)
+        catch
+            # Fallback defaults if parsing fails
+            Dict(
+                "surface_type" => "gyroid",
+                "porosity" => 0.85,
+                "unit_cell_size" => 2.0,
+                "resolution" => 64,
+                "explanation" => "Using default parameters due to parsing error."
+            )
+        end
+
+        # Apply constraints if provided
+        porosity = get(params, "porosity", 0.85)
+        if haskey(constraints, "porosity_range")
+            range = constraints["porosity_range"]
+            porosity = clamp(porosity, range[1], range[2])
+        end
+
+        # Map surface type string to symbol
+        surface_map = Dict(
+            "gyroid" => :gyroid,
+            "diamond" => :diamond,
+            "schwarz_p" => :schwarz_p,
+            "neovius" => :neovius,
+            "iwp" => :iwp,
+            "fks" => :fks
+        )
+        surface_type = get(surface_map, lowercase(get(params, "surface_type", "gyroid")), :gyroid)
+
+        # Generate the scaffold
+        unit_cell = get(params, "unit_cell_size", 2.0)
+        resolution = get(params, "resolution", 64)
+
+        volume = generate_tpms_scaffold(surface_type, porosity, unit_cell, resolution, 0.0)
+
+        explanation = get(params, "explanation",
+            "Generated a $(surface_type) scaffold with $(round(porosity*100, digits=1))% porosity.")
+
+        return Dict(
+            "volume" => volume,
+            "explanation" => explanation
+        )
+    catch e
+        @error "Text to scaffold failed" exception=(e, catch_backtrace())
+        # Fallback to default scaffold
+        volume = generate_tpms_scaffold(:gyroid, 0.85, 2.0, 64, 0.0)
+        return Dict(
+            "volume" => volume,
+            "explanation" => "Generated default gyroid scaffold (AI interpretation failed)."
+        )
+    end
 end
 
 function generate_gcode(volume::Array{Bool,3}, output_path::String, params::Dict)

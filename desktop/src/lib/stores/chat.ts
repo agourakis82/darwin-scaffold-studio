@@ -46,6 +46,16 @@ export function updateMessage(id: string, updates: Partial<ChatMessage>) {
   );
 }
 
+export function updateLastMessage(content: string, suggestions?: string[]) {
+  chatHistory.update((history) => {
+    if (history.length === 0) return history;
+    const lastIndex = history.length - 1;
+    return history.map((msg, i) =>
+      i === lastIndex ? { ...msg, content, suggestions } : msg
+    );
+  });
+}
+
 export function clearChat() {
   chatHistory.set([]);
 }

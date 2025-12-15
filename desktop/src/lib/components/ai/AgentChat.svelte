@@ -1,10 +1,34 @@
 <script lang="ts">
-  import { chatHistory, isTyping, addMessage, suggestionChips } from '$lib/stores/chat';
+  import { chatHistory, isTyping, addMessage, updateLastMessage, suggestionChips } from '$lib/stores/chat';
   import { scaffold } from '$lib/stores/scaffold';
+  import { metrics } from '$lib/stores/metrics';
+  import { juliaApi } from '$lib/services/julia-api';
+  import { wsService } from '$lib/services/websocket';
   import ChatMessage from './ChatMessage.svelte';
 
   let inputMessage = '';
   let chatContainer: HTMLDivElement;
+  let streamingContent = '';
+
+  // Agent types
+  type AgentType = 'design' | 'analysis' | 'synthesis';
+  let selectedAgent: AgentType = 'design';
+
+  const agentInfo: Record<AgentType, { name: string; description: string }> = {
+    design: { name: 'Design Assistant', description: 'Scaffold design and optimization' },
+    analysis: { name: 'Analysis Expert', description: 'Metrics and validation' },
+    synthesis: { name: 'Synthesis Guide', description: 'Fabrication and materials' },
+  };
+
+  // Build context for the agent
+  function buildContext() {
+    return {
+      workspace_id: $scaffold.workspaceId,
+      material: $scaffold.material,
+      tissue: $scaffold.tissue,
+      metrics: $metrics.current,
+    };
+  }
 
   async function handleSend() {
     if (!inputMessage.trim()) return;
@@ -15,34 +39,87 @@
     // Add user message
     addMessage({ role: 'user', content: message });
 
-    // Simulate AI response (in production, this would call Julia backend)
     isTyping.set(true);
+    streamingContent = '';
 
-    setTimeout(() => {
-      // Demo response
-      const responses = [
-        "Based on your current scaffold design, I recommend increasing the porosity to 85% for optimal bone regeneration. The Murphy et al. 2010 study showed that porosity in the 85-95% range provides the best cell infiltration.",
-        "I've analyzed your scaffold. The current pore size of 215 um is well within the optimal range for osteoblast attachment. Consider the gyroid TPMS structure for improved mechanical properties.",
-        "Your interconnectivity of 91.2% exceeds the minimum threshold of 90% recommended by Karageorgiou & Kaplan (2005). This should support good nutrient transport.",
-      ];
+    try {
+      // Try streaming first via WebSocket
+      const useStreaming = false; // Set to true when WebSocket is ready
 
+      if (useStreaming) {
+        // Add placeholder message for streaming
+        const msgId = addMessage({ role: 'assistant', content: '' });
+
+        await wsService.streamChat(
+          selectedAgent,
+          message,
+          buildContext(),
+          // On chunk
+          (chunk: string) => {
+            streamingContent += chunk;
+            updateLastMessage(streamingContent);
+            scrollToBottom();
+          },
+          // On complete
+          (response: { suggestions?: string[] }) => {
+            updateLastMessage(streamingContent, response.suggestions);
+            isTyping.set(false);
+            streamingContent = '';
+            scrollToBottom();
+          },
+          // On error
+          (error: string) => {
+            addMessage({ role: 'error', content: `Error: ${error}` });
+            isTyping.set(false);
+            streamingContent = '';
+          }
+        );
+      } else {
+        // Fallback to regular HTTP API
+        const result = await juliaApi.chatWithAgent(
+          selectedAgent,
+          message,
+          buildContext()
+        );
+
+        if (result.success && result.data) {
+          addMessage({
+            role: 'assistant',
+            content: result.data.response,
+            suggestions: result.data.suggestions,
+          });
+        } else {
+          addMessage({
+            role: 'error',
+            content: result.error || 'Failed to get response from agent',
+          });
+        }
+
+        isTyping.set(false);
+        scrollToBottom();
+      }
+    } catch (error) {
       addMessage({
-        role: 'assistant',
-        content: responses[Math.floor(Math.random() * responses.length)],
-        suggestions: ['Optimize scaffold', 'Export STL', 'Run validation'],
+        role: 'error',
+        content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       });
-
       isTyping.set(false);
+    }
+  }
 
-      // Scroll to bottom
-      setTimeout(() => {
-        chatContainer?.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
-      }, 100);
-    }, 1500);
+  function scrollToBottom() {
+    setTimeout(() => {
+      chatContainer?.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+    }, 100);
   }
 
   function handleChipClick(chip: string) {
     inputMessage = chip;
+    handleSend();
+  }
+
+  function handleSuggestionClick(suggestion: string) {
+    inputMessage = suggestion;
     handleSend();
   }
 
@@ -52,22 +129,64 @@
       handleSend();
     }
   }
+
+  function setAgent(agent: AgentType) {
+    selectedAgent = agent;
+  }
 </script>
 
 <div class="agent-chat">
   <div class="chat-header">
-    <div class="agent-avatar">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 8V4H8"></path>
-        <rect x="8" y="8" width="8" height="8" rx="1"></rect>
-        <path d="M12 16v4h4"></path>
-        <path d="M8 12H4"></path>
-        <path d="M20 12h-4"></path>
-      </svg>
+    <div class="agent-avatar" class:design={selectedAgent === 'design'} class:analysis={selectedAgent === 'analysis'} class:synthesis={selectedAgent === 'synthesis'}>
+      {#if selectedAgent === 'design'}
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 8V4H8"></path>
+          <rect x="8" y="8" width="8" height="8" rx="1"></rect>
+          <path d="M12 16v4h4"></path>
+          <path d="M8 12H4"></path>
+          <path d="M20 12h-4"></path>
+        </svg>
+      {:else if selectedAgent === 'analysis'}
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+      {:else}
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+        </svg>
+      {/if}
     </div>
     <div class="agent-info">
-      <h4>Design Assistant</h4>
-      <span class="status">{$isTyping ? 'Thinking...' : 'Online'}</span>
+      <h4>{agentInfo[selectedAgent].name}</h4>
+      <span class="status">{$isTyping ? 'Thinking...' : agentInfo[selectedAgent].description}</span>
+    </div>
+    <div class="agent-selector">
+      <button
+        class="agent-btn"
+        class:active={selectedAgent === 'design'}
+        on:click={() => setAgent('design')}
+        title="Design Assistant"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+      </button>
+      <button
+        class="agent-btn"
+        class:active={selectedAgent === 'analysis'}
+        on:click={() => setAgent('analysis')}
+        title="Analysis Expert"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </button>
+      <button
+        class="agent-btn"
+        class:active={selectedAgent === 'synthesis'}
+        on:click={() => setAgent('synthesis')}
+        title="Synthesis Guide"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      </button>
     </div>
   </div>
 
@@ -143,12 +262,61 @@
     border-radius: 10px;
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
+    transition: background var(--transition-fast);
+  }
+
+  .agent-avatar.design {
+    background: linear-gradient(135deg, #4a9eff, #00d4aa);
+  }
+
+  .agent-avatar.analysis {
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+  }
+
+  .agent-avatar.synthesis {
+    background: linear-gradient(135deg, #10b981, #059669);
+  }
+
+  .agent-info {
+    flex: 1;
   }
 
   .agent-info h4 {
     font-size: 14px;
     font-weight: 600;
     margin: 0;
+  }
+
+  .agent-selector {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-tertiary);
+    padding: 4px;
+    border-radius: 8px;
+  }
+
+  .agent-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .agent-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+
+  .agent-btn.active {
+    background: var(--primary);
+    color: white;
   }
 
   .status {
