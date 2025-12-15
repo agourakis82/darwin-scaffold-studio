@@ -14,6 +14,12 @@
   let controls: OrbitControls;
   let cellMeshes: Map<CellType, THREE.InstancedMesh> = new Map();
   let animationId: number;
+  let resizeObserver: ResizeObserver;
+  let sphereGeometry: THREE.SphereGeometry;
+  let scaffoldGeometry: THREE.BoxGeometry;
+  let scaffoldEdges: THREE.EdgesGeometry;
+  let gridHelper: THREE.GridHelper;
+  const dummy = new THREE.Object3D();
 
   const MAX_CELLS_PER_TYPE = 5000;
 
@@ -24,8 +30,23 @@
 
   onDestroy(() => {
     if (animationId) cancelAnimationFrame(animationId);
-    if (renderer) renderer.dispose();
+    if (resizeObserver) resizeObserver.disconnect();
+
+    // Dispose cell meshes
+    for (const mesh of cellMeshes.values()) {
+      mesh.geometry.dispose();
+      (mesh.material as THREE.MeshLambertMaterial).dispose();
+    }
+    cellMeshes.clear();
+
+    // Dispose geometries
+    if (sphereGeometry) sphereGeometry.dispose();
+    if (scaffoldGeometry) scaffoldGeometry.dispose();
+    if (scaffoldEdges) scaffoldEdges.dispose();
+    if (gridHelper) gridHelper.dispose();
+
     if (controls) controls.dispose();
+    if (renderer) renderer.dispose();
   });
 
   $: if (scene && cells) {
@@ -61,8 +82,8 @@
     scene.add(directionalLight);
 
     // Scaffold bounding box
-    const scaffoldGeometry = new THREE.BoxGeometry(scaffoldSize, scaffoldSize, scaffoldSize);
-    const scaffoldEdges = new THREE.EdgesGeometry(scaffoldGeometry);
+    scaffoldGeometry = new THREE.BoxGeometry(scaffoldSize, scaffoldSize, scaffoldSize);
+    scaffoldEdges = new THREE.EdgesGeometry(scaffoldGeometry);
     const scaffoldLine = new THREE.LineSegments(
       scaffoldEdges,
       new THREE.LineBasicMaterial({ color: 0x4a9eff, opacity: 0.3, transparent: true })
@@ -71,11 +92,11 @@
     scene.add(scaffoldLine);
 
     // Grid helper
-    const gridHelper = new THREE.GridHelper(scaffoldSize, 10, 0x333333, 0x222222);
+    gridHelper = new THREE.GridHelper(scaffoldSize, 10, 0x333333, 0x222222);
     scene.add(gridHelper);
 
-    // Create instanced meshes for each cell type
-    const sphereGeometry = new THREE.SphereGeometry(0.03, 8, 8);
+    // Create instanced meshes for each cell type (shared geometry)
+    sphereGeometry = new THREE.SphereGeometry(0.03, 8, 8);
 
     for (const cellType of Object.values(CellType)) {
       if (cellType === CellType.DEAD) continue;
@@ -89,7 +110,7 @@
     }
 
     // Handle resize
-    const resizeObserver = new ResizeObserver(() => {
+    resizeObserver = new ResizeObserver(() => {
       if (!container) return;
       camera.aspect = container.clientWidth / container.clientHeight;
       camera.updateProjectionMatrix();
@@ -133,7 +154,6 @@
   function updateCells() {
     if (!scene || cells.length === 0) return;
 
-    const dummy = new THREE.Object3D();
     const cellsByType = new Map<CellType, Cell[]>();
 
     // Group cells by type

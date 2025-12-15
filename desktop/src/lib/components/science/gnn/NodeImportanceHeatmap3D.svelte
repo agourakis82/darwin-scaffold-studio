@@ -19,6 +19,12 @@
   let nodeMeshes: THREE.InstancedMesh;
   let edgeLines: THREE.LineSegments;
   let animationId: number;
+  let gridHelper: THREE.GridHelper;
+  let axesHelper: THREE.AxesHelper;
+  let nodeGeometry: THREE.SphereGeometry;
+  let nodeMaterial: THREE.MeshPhongMaterial;
+  let edgeGeometry: THREE.BufferGeometry;
+  let edgeMaterial: THREE.LineBasicMaterial;
 
   const nodeRadius = 0.5;
   const dummy = new THREE.Object3D();
@@ -37,8 +43,26 @@
 
   onDestroy(() => {
     if (animationId) cancelAnimationFrame(animationId);
-    if (renderer) renderer.dispose();
+
+    // Dispose meshes and geometry
+    if (nodeMeshes) {
+      nodeMeshes.geometry.dispose();
+      (nodeMeshes.material as THREE.Material).dispose();
+    }
+    if (edgeLines) {
+      edgeLines.geometry.dispose();
+      (edgeLines.material as THREE.Material).dispose();
+    }
+
+    // Dispose tracked resources
+    if (nodeGeometry) nodeGeometry.dispose();
+    if (nodeMaterial) nodeMaterial.dispose();
+    if (edgeGeometry) edgeGeometry.dispose();
+    if (edgeMaterial) edgeMaterial.dispose();
+    if (gridHelper) gridHelper.dispose();
+
     if (controls) controls.dispose();
+    if (renderer) renderer.dispose();
   });
 
   function initScene() {
@@ -70,11 +94,11 @@
     scene.add(directionalLight);
 
     // Grid helper
-    const gridHelper = new THREE.GridHelper(20, 20, 0x3d4450, 0x3d4450);
+    gridHelper = new THREE.GridHelper(20, 20, 0x3d4450, 0x3d4450);
     scene.add(gridHelper);
 
     // Axes helper
-    const axesHelper = new THREE.AxesHelper(5);
+    axesHelper = new THREE.AxesHelper(5);
     scene.add(axesHelper);
 
     if (graph) updateVisualization();
@@ -85,58 +109,71 @@
   function updateVisualization() {
     if (!scene || !graph) return;
 
-    // Clear previous meshes
-    if (nodeMeshes) scene.remove(nodeMeshes);
-    if (edgeLines) scene.remove(edgeLines);
+    // Dispose and clear previous meshes
+    if (nodeMeshes) {
+      scene.remove(nodeMeshes);
+      nodeMeshes.geometry.dispose();
+      (nodeMeshes.material as THREE.Material).dispose();
+    }
+    if (edgeLines) {
+      scene.remove(edgeLines);
+      edgeLines.geometry.dispose();
+      (edgeLines.material as THREE.Material).dispose();
+    }
 
     // Create instanced mesh for nodes
-    const geometry = new THREE.SphereGeometry(nodeRadius, 16, 16);
-    const material = new THREE.MeshPhongMaterial({ vertexColors: true });
+    nodeGeometry = new THREE.SphereGeometry(nodeRadius, 16, 16);
+    nodeMaterial = new THREE.MeshPhongMaterial({ vertexColors: true });
 
-    nodeMeshes = new THREE.InstancedMesh(geometry, material, graph.nodes.length);
+    nodeMeshes = new THREE.InstancedMesh(nodeGeometry, nodeMaterial, graph.nodes.length);
 
-    // Position nodes and set colors
-    const colors = new Float32Array(graph.nodes.length * 3);
+    // Position nodes
     graph.nodes.forEach((node, i) => {
       dummy.position.set(node.x, node.y, node.z);
       dummy.updateMatrix();
       nodeMeshes.setMatrixAt(i, dummy.matrix);
-
-      // Color based on importance
-      const importance = nodeImportance[i] ?? node.importance;
-      const color = new THREE.Color(importanceToColor(importance));
-      colors[i * 3] = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
     });
 
     nodeMeshes.instanceMatrix.needsUpdate = true;
     scene.add(nodeMeshes);
 
+    // Update colors separately
+    updateNodeColors();
+
+    // Build node lookup map for O(1) access
+    const nodeMap = new Map<number, GraphNode>();
+    for (const node of graph.nodes) {
+      nodeMap.set(node.id, node);
+    }
+
     // Create edges
-    const edgeGeometry = new THREE.BufferGeometry();
+    edgeGeometry = new THREE.BufferGeometry();
     const positions: number[] = [];
 
-    graph.edges.forEach(edge => {
-      const source = graph.nodes.find(n => n.id === edge.source);
-      const target = graph.nodes.find(n => n.id === edge.target);
+    for (const edge of graph.edges) {
+      const source = nodeMap.get(edge.source);
+      const target = nodeMap.get(edge.target);
       if (source && target) {
         positions.push(source.x, source.y, source.z);
         positions.push(target.x, target.y, target.z);
       }
-    });
+    }
 
     edgeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x6b7280, opacity: 0.5, transparent: true });
+    edgeMaterial = new THREE.LineBasicMaterial({ color: 0x6b7280, opacity: 0.5, transparent: true });
     edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
     scene.add(edgeLines);
 
-    // Center camera on graph
+    // Center camera on graph (compute centroid without creating extra Vector3s)
     if (graph.nodes.length > 0) {
-      const center = new THREE.Vector3();
-      graph.nodes.forEach(n => center.add(new THREE.Vector3(n.x, n.y, n.z)));
-      center.divideScalar(graph.nodes.length);
-      controls.target.copy(center);
+      let cx = 0, cy = 0, cz = 0;
+      for (const n of graph.nodes) {
+        cx += n.x;
+        cy += n.y;
+        cz += n.z;
+      }
+      const count = graph.nodes.length;
+      controls.target.set(cx / count, cy / count, cz / count);
     }
   }
 

@@ -18,6 +18,10 @@
   let volumeMesh: THREE.Points;
   let hypoxiaMesh: THREE.Points;
   let animationId: number;
+  let resizeObserver: ResizeObserver;
+  let boxGeometry: THREE.BoxGeometry;
+  let boxEdges: THREE.EdgesGeometry;
+  let axesHelper: THREE.AxesHelper;
 
   onMount(() => {
     initScene();
@@ -26,8 +30,24 @@
 
   onDestroy(() => {
     if (animationId) cancelAnimationFrame(animationId);
-    if (renderer) renderer.dispose();
+    if (resizeObserver) resizeObserver.disconnect();
+
+    // Dispose meshes
+    if (volumeMesh) {
+      volumeMesh.geometry.dispose();
+      (volumeMesh.material as THREE.PointsMaterial).dispose();
+    }
+    if (hypoxiaMesh) {
+      hypoxiaMesh.geometry.dispose();
+      (hypoxiaMesh.material as THREE.PointsMaterial).dispose();
+    }
+
+    // Dispose helpers
+    if (boxGeometry) boxGeometry.dispose();
+    if (boxEdges) boxEdges.dispose();
+
     if (controls) controls.dispose();
+    if (renderer) renderer.dispose();
   });
 
   $: if (scene && concentrationData) {
@@ -63,18 +83,18 @@
     scene.add(ambientLight);
 
     // Bounding box helper
-    const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const boxEdges = new THREE.EdgesGeometry(boxGeometry);
+    boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+    boxEdges = new THREE.EdgesGeometry(boxGeometry);
     const boxLine = new THREE.LineSegments(boxEdges, new THREE.LineBasicMaterial({ color: 0x4a9eff, opacity: 0.3, transparent: true }));
     boxLine.position.set(0.5, 0.5, 0.5);
     scene.add(boxLine);
 
     // Axes helper
-    const axesHelper = new THREE.AxesHelper(0.3);
+    axesHelper = new THREE.AxesHelper(0.3);
     scene.add(axesHelper);
 
     // Handle resize
-    const resizeObserver = new ResizeObserver(() => {
+    resizeObserver = new ResizeObserver(() => {
       if (!container) return;
       camera.aspect = container.clientWidth / container.clientHeight;
       camera.updateProjectionMatrix();
@@ -122,9 +142,17 @@
   function updateVisualization() {
     if (!concentrationData || !scene) return;
 
-    // Remove existing meshes
-    if (volumeMesh) scene.remove(volumeMesh);
-    if (hypoxiaMesh) scene.remove(hypoxiaMesh);
+    // Dispose and remove existing meshes
+    if (volumeMesh) {
+      scene.remove(volumeMesh);
+      volumeMesh.geometry.dispose();
+      (volumeMesh.material as THREE.PointsMaterial).dispose();
+    }
+    if (hypoxiaMesh) {
+      scene.remove(hypoxiaMesh);
+      hypoxiaMesh.geometry.dispose();
+      (hypoxiaMesh.material as THREE.PointsMaterial).dispose();
+    }
 
     const { nx, ny, nz } = dimensions;
     const positions: number[] = [];

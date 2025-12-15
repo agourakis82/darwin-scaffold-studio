@@ -16,6 +16,8 @@
   let controls: OrbitControls;
   let scaffoldMesh: THREE.Mesh | null = null;
   let animationId: number;
+  let gridHelper: THREE.GridHelper;
+  let axesHelper: THREE.AxesHelper;
 
   // View controls
   let isLoading = true;
@@ -31,8 +33,19 @@
   onDestroy(() => {
     window.removeEventListener('resize', onResize);
     if (animationId) cancelAnimationFrame(animationId);
-    renderer?.dispose();
-    scene?.clear();
+
+    // Dispose scaffold mesh
+    if (scaffoldMesh) {
+      scaffoldMesh.geometry.dispose();
+      (scaffoldMesh.material as THREE.Material).dispose();
+    }
+
+    // Dispose helpers
+    if (gridHelper) gridHelper.dispose();
+    if (axesHelper) axesHelper.dispose();
+
+    if (controls) controls.dispose();
+    if (renderer) renderer.dispose();
   });
 
   function initScene() {
@@ -78,11 +91,11 @@
     scene.add(fillLight);
 
     // Grid helper
-    const gridHelper = new THREE.GridHelper(100, 20, 0x30363d, 0x21262d);
+    gridHelper = new THREE.GridHelper(100, 20, 0x30363d, 0x21262d);
     scene.add(gridHelper);
 
     // Axes helper
-    const axesHelper = new THREE.AxesHelper(30);
+    axesHelper = new THREE.AxesHelper(30);
     scene.add(axesHelper);
   }
 
