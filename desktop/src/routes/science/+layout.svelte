@@ -9,6 +9,8 @@
     { href: '/science/causal', name: 'Causal Discovery', desc: 'DAG learning & effect estimation', color: '#3b82f6' },
     { href: '/science/gnn', name: 'GNN Prediction', desc: 'Graph neural network properties', color: '#14b8a6' },
     { href: '/science/sem', name: 'SEM Classification', desc: 'AI cell type identification', color: '#f97316' },
+    { href: '/science/quantum', name: 'Quantum Optimization', desc: 'QAOA scaffold optimization', color: '#a855f7' },
+    { href: '/science/blockchain', name: 'Blockchain Ledger', desc: 'Immutable provenance tracking', color: '#eab308' },
   ];
 
   $: currentPath = $page.url.pathname;

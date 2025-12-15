@@ -56,6 +56,22 @@
       icon: 'eye',
       features: ['Cell Detection', 'Type Classification', 'Morphology Analysis'],
     },
+    {
+      href: '/science/quantum',
+      name: 'Quantum Optimization',
+      desc: 'QAOA and quantum annealing for scaffold parameter optimization. Visualize quantum circuits and energy landscapes.',
+      color: '#a855f7',
+      icon: 'zap',
+      features: ['QAOA Circuits', 'Energy Landscape', 'Quantum Advantage'],
+    },
+    {
+      href: '/science/blockchain',
+      name: 'Blockchain Provenance',
+      desc: 'Immutable record of scaffold design history. Track experiments with cryptographic hashing, digital signatures, and IPFS storage.',
+      color: '#eab308',
+      icon: 'link',
+      features: ['Version History', 'Chain Verification', 'Digital Signatures'],
+    },
   ];
 </script>
 
