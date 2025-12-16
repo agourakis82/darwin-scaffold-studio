@@ -135,6 +135,9 @@ jobs:
         with:
           path: artifacts
 
+      - name: List artifacts
+        run: find artifacts -type f
+
       - name: Get version
         id: version
         run: |
@@ -148,8 +151,11 @@ jobs:
           name: Desktop GUI v${{ steps.version.outputs.version }}
           draft: true
           files: |
-            artifacts/desktop-linux/*
-            artifacts/desktop-windows/*
-            artifacts/desktop-macos/*
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
+            artifacts/**/*.msi
+            artifacts/**/*.exe
+            artifacts/**/*.dmg
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
