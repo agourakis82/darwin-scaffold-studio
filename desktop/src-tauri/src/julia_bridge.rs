@@ -18,52 +18,56 @@ pub enum JuliaError {
 static JULIA_PROCESS: Mutex<Option<Child>> = Mutex::new(None);
 
 pub async fn start_julia_server(app: &AppHandle) -> Result<(), JuliaError> {
-    let mut process_guard = JULIA_PROCESS.lock().unwrap();
+    // Check if already running and start process - release lock before any await
+    let pid = {
+        let mut process_guard = JULIA_PROCESS.lock().unwrap();
 
-    if process_guard.is_some() {
-        return Ok(()); // Already running
-    }
+        if process_guard.is_some() {
+            return Ok(()); // Already running
+        }
 
-    // Get the project root (parent of desktop/)
-    let project_root = std::env::current_dir()
-        .map_err(|e| JuliaError::StartError(e.to_string()))?
-        .parent()
-        .map(|p| p.to_path_buf())
-        .unwrap_or_else(|| std::env::current_dir().unwrap());
+        // Get the project root (parent of desktop/)
+        let project_root = std::env::current_dir()
+            .map_err(|e| JuliaError::StartError(e.to_string()))?
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::env::current_dir().unwrap());
 
-    println!("Starting Julia server from: {:?}", project_root);
+        println!("Starting Julia server from: {:?}", project_root);
 
-    // Start Julia server
-    let child = Command::new("julia")
-        .args([
-            "--project=.",
-            "-e",
-            r#"
-            include("src/server.jl")
-            println("Julia server started on port 8081")
-            # Keep the process alive
-            while true
-                sleep(1)
-            end
-            "#,
-        ])
-        .current_dir(&project_root)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| JuliaError::StartError(e.to_string()))?;
+        // Start Julia server
+        let child = Command::new("julia")
+            .args([
+                "--project=.",
+                "-e",
+                r#"
+                include("src/server.jl")
+                println("Julia server started on port 8081")
+                # Keep the process alive
+                while true
+                    sleep(1)
+                end
+                "#,
+            ])
+            .current_dir(&project_root)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| JuliaError::StartError(e.to_string()))?;
 
-    let pid = child.id();
-    *process_guard = Some(child);
+        let pid = child.id();
+        *process_guard = Some(child);
+        pid
+    }; // MutexGuard released here
 
-    // Update app state
+    // Update app state (separate lock scope)
     if let Some(state) = app.try_state::<Mutex<crate::state::AppState>>() {
         let mut state = state.lock().unwrap();
         state.julia_running = true;
         state.julia_pid = Some(pid);
     }
 
-    // Wait for server to be ready
+    // Wait for server to be ready (no lock held)
     tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     // Check if server is responding
