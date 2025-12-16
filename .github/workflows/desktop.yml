@@ -1,6 +1,9 @@
 # Darwin Scaffold Studio - Desktop App CI
 name: Desktop Build
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [main]
