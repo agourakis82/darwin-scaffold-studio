@@ -85,6 +85,7 @@ outputs/
 *.stl
 !presentation/**/*.png
 !presentation/**/*.jpg
+!desktop/src-tauri/icons/*.png
 
 darwin-server/target/
 *.pyc
