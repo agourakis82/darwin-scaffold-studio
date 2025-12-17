@@ -165,6 +165,15 @@ const POLYMER_CANDIDATES = [
     PolymerCandidate("PEG Diacrylate", "PEGDA", 0.5, 0.1, (4.0, 52.0), :hydrolytic, 0.90, 2.0, true, "PMID:23201040"),
     PolymerCandidate("Silk Fibroin", "SILK", 1.0, 0.2, (12.0, 52.0), :enzymatic, 0.95, 3.5, true, "PMC4082975"),
     PolymerCandidate("Matrigel", "MAT", 0.001, 0.0005, (0.5, 2.0), :enzymatic, 0.97, 10.0, false, "PMC5449418"),
+
+    # Ceramics and composites (for load-bearing bone applications)
+    # Note: Ceramics degrade by dissolution/resorption, not chain scission
+    PolymerCandidate("Hydroxyapatite", "HAp", 80000.0, 100.0, (52.0, 260.0), :dissolution, 0.95, 2.0, true, "PMC4082975"),
+    PolymerCandidate("β-Tricalcium Phosphate", "TCP", 50000.0, 80.0, (12.0, 52.0), :dissolution, 0.92, 1.8, true, "PMC3347861"),
+    PolymerCandidate("Bioglass 45S5", "BG45S5", 35000.0, 50.0, (8.0, 26.0), :dissolution, 0.90, 2.5, true, "PMC6682490"),
+    PolymerCandidate("HAp/PCL Composite (70:30)", "HAp-PCL", 15000.0, 40.0, (52.0, 156.0), :mixed, 0.93, 3.0, false, "PMC5449418"),
+    PolymerCandidate("HAp/PLGA Composite (60:40)", "HAp-PLGA", 12000.0, 35.0, (20.0, 52.0), :mixed, 0.91, 2.8, false, "PMC4424662"),
+    PolymerCandidate("TCP/Collagen Composite", "TCP-COL", 8000.0, 25.0, (8.0, 26.0), :mixed, 0.94, 4.0, false, "PMID:17961371"),
 ]
 
 # ============================================================================
@@ -334,19 +343,37 @@ function score_polymer(polymer::PolymerCandidate, tissue::TissueRequirements)
     E_at_max_porosity = polymer.E_solid_mpa * (1 - target_phi_max)^2
     E_at_min_porosity = polymer.E_solid_mpa * (1 - target_phi_min)^2
 
-    # Determine if this is a soft tissue (target E <= 1 MPa)
-    is_soft_tissue = target_E_max <= 1.0
+    # Determine if this is a soft tissue (target E <= 10 MPa, hydrogel range with crosslinking)
+    is_soft_tissue = target_E_max <= 10.0
     is_hydrogel = polymer.E_solid_mpa <= 1.0
 
+    # Calculate max achievable E with crosslinking for hydrogels
+    max_crosslink_E = polymer.E_solid_mpa
+    if is_hydrogel
+        # Find best crosslinking multiplier for this polymer
+        compatible = filter(m -> polymer.abbrev in m.compatible_polymers, CROSSLINKING_METHODS)
+        if !isempty(compatible)
+            max_multiplier = maximum(m -> m.E_multiplier, compatible)
+            max_crosslink_E = polymer.E_solid_mpa * max_multiplier
+        end
+    end
+
     if is_soft_tissue && is_hydrogel
-        # For soft tissues, hydrogels are ideal
-        # Check if hydrogel E is in right range (within order of magnitude)
-        if polymer.E_solid_mpa <= target_E_max * 10 && polymer.E_solid_mpa >= target_E_min * 0.1
+        # For soft tissues, hydrogels are ideal (with crosslinking if needed)
+        # Check if hydrogel can achieve target modulus (with or without crosslinking)
+        if max_crosslink_E >= target_E_min && polymer.E_solid_mpa <= target_E_max * 2
             score += 30
-            push!(reasons, "Hydrogel ideal for soft tissue: E_solid = $(round(polymer.E_solid_mpa * 1000, digits=0)) kPa")
-        else
+            if max_crosslink_E > polymer.E_solid_mpa
+                push!(reasons, "Hydrogel ideal: $(round(polymer.E_solid_mpa * 1000, digits=0)) kPa (up to $(round(max_crosslink_E * 1000, digits=0)) kPa crosslinked)")
+            else
+                push!(reasons, "Hydrogel ideal for soft tissue: E_solid = $(round(polymer.E_solid_mpa * 1000, digits=0)) kPa")
+            end
+        elseif polymer.E_solid_mpa <= target_E_max * 10
             score += 20
             push!(reasons, "Hydrogel suitable: E_solid = $(round(polymer.E_solid_mpa * 1000, digits=0)) kPa")
+        else
+            score += 10
+            push!(reasons, "Hydrogel may be too soft")
         end
     elseif is_soft_tissue && !is_hydrogel
         # Stiff polymer for soft tissue - problematic
