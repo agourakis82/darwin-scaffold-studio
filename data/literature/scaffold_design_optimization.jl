@@ -1,0 +1,549 @@
+"""
+Scaffold Design Optimization
+============================
+
+Integrates polymer science, structure-property relationships, and tissue
+requirements into a practical scaffold design tool.
+
+This module:
+1. Takes tissue healing requirements as input
+2. Selects appropriate polymer based on degradation timeline
+3. Calculates optimal scaffold geometry
+4. Predicts properties over time
+5. Validates against Q1 literature targets
+
+All models and targets sourced from peer-reviewed literature.
+"""
+
+using Statistics
+using Printf
+
+# ============================================================================
+# TISSUE HEALING REQUIREMENTS
+# ============================================================================
+
+"""
+Tissue healing phases and requirements from literature.
+Sources: PMC3347861, Frontiers Bioeng 2024
+"""
+struct TissueRequirements
+    name::String
+    healing_time_weeks::Tuple{Float64, Float64}  # Min-max healing time
+    target_porosity::Tuple{Float64, Float64}     # Min-max porosity
+    target_pore_size_um::Tuple{Float64, Float64} # Min-max pore size
+    target_modulus_mpa::Tuple{Float64, Float64}  # Min-max modulus
+    target_strength_mpa::Tuple{Float64, Float64} # Min-max strength
+    cell_type::Symbol
+    vascularization_critical::Bool
+    load_bearing::Bool
+    source::String
+end
+
+const TISSUE_REQUIREMENTS = Dict(
+    :trabecular_bone => TissueRequirements(
+        "Trabecular Bone",
+        (12.0, 24.0),      # 3-6 months healing
+        (0.50, 0.90),      # 50-90% porosity
+        (300.0, 600.0),    # 300-600 um pores
+        (100.0, 500.0),    # E match trabecular (100-500 MPa)
+        (2.0, 12.0),       # Strength 2-12 MPa
+        :osteoblast,
+        true,
+        true,
+        "Karageorgiou 2005"
+    ),
+    :cortical_bone => TissueRequirements(
+        "Cortical Bone",
+        (24.0, 52.0),      # 6-12 months
+        (0.30, 0.60),      # Lower porosity for strength
+        (150.0, 400.0),    # Smaller pores OK
+        (5000.0, 20000.0), # E match cortical
+        (50.0, 200.0),     # High strength
+        :osteoblast,
+        false,
+        true,
+        "Murphy 2010"
+    ),
+    :articular_cartilage => TissueRequirements(
+        "Articular Cartilage",
+        (16.0, 52.0),      # Long healing
+        (0.80, 0.95),      # High porosity
+        (100.0, 300.0),    # Smaller pores
+        (0.5, 10.0),       # Low modulus
+        (0.5, 5.0),        # Low strength
+        :chondrocyte,
+        false,
+        false,
+        "PMID:17961371"
+    ),
+    :skin => TissueRequirements(
+        "Skin/Dermis",
+        (2.0, 8.0),        # Fast healing
+        (0.70, 0.90),
+        (50.0, 200.0),
+        (0.1, 1.0),        # Very soft
+        (0.1, 1.0),
+        :fibroblast,
+        true,
+        false,
+        "PMC6682490"
+    ),
+    :liver => TissueRequirements(
+        "Liver",
+        (4.0, 12.0),
+        (0.85, 0.95),
+        (100.0, 250.0),
+        (0.1, 2.0),
+        (0.1, 1.0),
+        :hepatocyte,
+        true,
+        false,
+        "PMID:23201040"
+    ),
+    :cardiac => TissueRequirements(
+        "Cardiac Muscle",
+        (8.0, 24.0),
+        (0.70, 0.90),
+        (100.0, 200.0),
+        (0.05, 0.5),       # Very soft, elastic
+        (0.01, 0.1),
+        :cardiomyocyte,
+        true,
+        false,
+        "PMC5449418"
+    ),
+    :nerve => TissueRequirements(
+        "Peripheral Nerve",
+        (12.0, 52.0),      # Very slow
+        (0.60, 0.85),
+        (20.0, 100.0),     # Small pores for guidance
+        (0.01, 0.5),
+        (0.01, 0.5),
+        :neuron,
+        true,
+        false,
+        "PMC4424662"
+    ),
+)
+
+# ============================================================================
+# POLYMER DATABASE (from polymer_degradation_science.jl)
+# ============================================================================
+
+struct PolymerCandidate
+    name::String
+    abbrev::String
+    E_solid_mpa::Float64        # Solid modulus
+    sigma_solid_mpa::Float64    # Solid strength
+    degradation_weeks::Tuple{Float64, Float64}  # Degradation time range
+    mechanism::Symbol           # :chain_end or :random
+    biocompatibility::Float64   # 0-1 score
+    cost_relative::Float64      # 1.0 = standard
+    fda_approved::Bool
+    source::String
+end
+
+const POLYMER_CANDIDATES = [
+    PolymerCandidate("Poly(lactic acid)", "PLA", 3500.0, 50.0, (48.0, 104.0), :chain_end, 0.95, 1.0, true, "PMC6682490"),
+    PolymerCandidate("Poly(glycolic acid)", "PGA", 7000.0, 60.0, (4.0, 12.0), :chain_end, 0.90, 1.2, true, "PMC6682490"),
+    PolymerCandidate("PLGA 50:50", "PLGA50", 2000.0, 40.0, (4.0, 8.0), :random, 0.92, 1.5, true, "PMC3347861"),
+    PolymerCandidate("PLGA 85:15", "PLGA85", 2500.0, 45.0, (20.0, 40.0), :random, 0.93, 1.4, true, "PMC3347861"),
+    PolymerCandidate("Polycaprolactone", "PCL", 400.0, 25.0, (104.0, 208.0), :chain_end, 0.98, 0.8, true, "PMC5449418"),
+    PolymerCandidate("Poly(3-hydroxybutyrate)", "PHB", 3500.0, 40.0, (52.0, 156.0), :chain_end, 0.85, 2.0, false, "PMC4424662"),
+    PolymerCandidate("Poly(propylene fumarate)", "PPF", 2000.0, 30.0, (26.0, 78.0), :random, 0.88, 3.0, false, "PMID:17961371"),
+    PolymerCandidate("Polyurethane (degradable)", "PU", 50.0, 10.0, (26.0, 104.0), :random, 0.80, 2.5, false, "PMC5923535"),
+]
+
+# ============================================================================
+# DESIGN ALGORITHM
+# ============================================================================
+
+"""
+Score a polymer for a given tissue application.
+"""
+function score_polymer(polymer::PolymerCandidate, tissue::TissueRequirements)
+    score = 0.0
+    reasons = String[]
+
+    # 1. Degradation time match (40% weight)
+    deg_min, deg_max = polymer.degradation_weeks
+    heal_min, heal_max = tissue.healing_time_weeks
+
+    if deg_min <= heal_max && deg_max >= heal_min
+        # Overlap exists
+        overlap = min(deg_max, heal_max) - max(deg_min, heal_min)
+        total_range = max(deg_max, heal_max) - min(deg_min, heal_min)
+        deg_score = 40 * overlap / total_range
+        score += deg_score
+        push!(reasons, @sprintf("Degradation match: %.0f%%", deg_score/40*100))
+    else
+        push!(reasons, "Degradation time mismatch")
+    end
+
+    # 2. Mechanical properties potential (30% weight)
+    # Can we achieve target modulus with reasonable porosity?
+    target_E_min, target_E_max = tissue.target_modulus_mpa
+    target_phi_min, target_phi_max = tissue.target_porosity
+
+    # Gibson-Ashby: E_scaffold = E_solid * (1-phi)^2
+    # At target_phi_max, E_scaffold = E_solid * (1-phi_max)^2
+    E_at_max_porosity = polymer.E_solid_mpa * (1 - target_phi_max)^2
+    E_at_min_porosity = polymer.E_solid_mpa * (1 - target_phi_min)^2
+
+    if E_at_max_porosity <= target_E_max && E_at_min_porosity >= target_E_min
+        score += 30
+        push!(reasons, "Modulus achievable: E = $(round(E_at_max_porosity, digits=1))-$(round(E_at_min_porosity, digits=1)) MPa")
+    elseif E_at_min_porosity >= target_E_min
+        score += 15
+        push!(reasons, "Modulus achievable at low porosity only")
+    else
+        push!(reasons, "Cannot achieve target modulus")
+    end
+
+    # 3. Biocompatibility (20% weight)
+    score += 20 * polymer.biocompatibility
+    push!(reasons, @sprintf("Biocompatibility: %.0f%%", polymer.biocompatibility * 100))
+
+    # 4. FDA approval (10% weight)
+    if polymer.fda_approved
+        score += 10
+        push!(reasons, "FDA approved")
+    else
+        push!(reasons, "Not FDA approved (research use)")
+    end
+
+    return (score=score, reasons=reasons, polymer=polymer)
+end
+
+"""
+Select best polymer for tissue application.
+"""
+function select_polymer(tissue::TissueRequirements;
+                        require_fda::Bool=true,
+                        max_cost::Float64=3.0)
+    candidates = filter(p -> p.cost_relative <= max_cost, POLYMER_CANDIDATES)
+    if require_fda
+        candidates = filter(p -> p.fda_approved, candidates)
+    end
+
+    if isempty(candidates)
+        error("No polymers meet requirements")
+    end
+
+    scored = [score_polymer(p, tissue) for p in candidates]
+    sort!(scored, by=x -> x.score, rev=true)
+
+    return scored
+end
+
+"""
+Calculate optimal scaffold geometry for given polymer and tissue.
+"""
+function optimize_geometry(polymer::PolymerCandidate, tissue::TissueRequirements)
+    # Target values
+    target_E_min, target_E_max = tissue.target_modulus_mpa
+    target_phi_min, target_phi_max = tissue.target_porosity
+    target_pore_min, target_pore_max = tissue.target_pore_size_um
+
+    # Calculate porosity for target modulus (Gibson-Ashby inverse)
+    # E_target = E_solid * (1-phi)^2
+    # phi = 1 - sqrt(E_target / E_solid)
+
+    target_E = (target_E_min + target_E_max) / 2
+    phi_for_E = 1 - sqrt(target_E / polymer.E_solid_mpa)
+    phi_for_E = clamp(phi_for_E, 0.0, 0.99)
+
+    # Reconcile with tissue porosity requirements
+    optimal_porosity = clamp(phi_for_E, target_phi_min, target_phi_max)
+
+    # If porosity constraint dominates, recalculate achievable E
+    actual_E = polymer.E_solid_mpa * (1 - optimal_porosity)^2
+
+    # Optimal pore size: middle of range, biased toward cell requirements
+    optimal_pore = (target_pore_min + target_pore_max) / 2
+
+    # Window size for interconnectivity (target: 30-40% of pore size)
+    window_size = 0.35 * optimal_pore
+
+    # Wall thickness from porosity and pore size
+    # For cubic unit cells: wall ~ pore * (1-phi)^(1/3) / phi^(1/3)
+    wall_thickness = optimal_pore * (1 - optimal_porosity)^(1/3) / optimal_porosity^(1/3)
+
+    return (
+        porosity = optimal_porosity,
+        pore_size_um = optimal_pore,
+        window_size_um = window_size,
+        wall_thickness_um = wall_thickness,
+        E_scaffold_mpa = actual_E,
+        sigma_scaffold_mpa = polymer.sigma_solid_mpa * 0.3 * (1 - optimal_porosity)^1.5,
+    )
+end
+
+"""
+Predict scaffold properties over time as it degrades.
+"""
+function predict_degradation_profile(polymer::PolymerCandidate,
+                                      geometry::NamedTuple;
+                                      time_weeks::Vector{Float64}=Float64.(collect(0:4:52)))
+    # Degradation rate (first-order approximation)
+    # Half-life ~ (deg_min + deg_max) / 2
+    half_life = (polymer.degradation_weeks[1] + polymer.degradation_weeks[2]) / 2
+    k = log(2) / half_life  # per week
+
+    results = []
+
+    E0 = geometry.E_scaffold_mpa
+    phi0 = geometry.porosity
+
+    for t in time_weeks
+        # MW decay (exponential)
+        mw_fraction = exp(-k * t)
+
+        # Mass loss (delayed, autocatalytic for random scission)
+        if polymer.mechanism == :random
+            # Autocatalytic mass loss
+            mass_remaining = 1.0 / (1.0 + exp(0.2 * (t - half_life)))
+        else
+            # Chain-end: surface erosion
+            mass_remaining = max(0, 1.0 - (1 - exp(-k * t/2)))
+        end
+        mass_remaining = clamp(mass_remaining, 0.0, 1.0)
+
+        # Porosity increases as mass is lost
+        phi_t = 1.0 - (1.0 - phi0) * mass_remaining
+        phi_t = clamp(phi_t, phi0, 0.999)
+
+        # Modulus decay (combined MW and porosity effects)
+        E_t = E0 * mw_fraction^0.7 * mass_remaining^2
+
+        # Mechanical integrity
+        if mw_fraction < 0.15
+            E_t = 0.0  # Below critical MW
+        end
+
+        push!(results, (
+            time_weeks = t,
+            mw_fraction = mw_fraction,
+            mass_remaining = mass_remaining,
+            porosity = phi_t,
+            E_mpa = E_t,
+            integrity = mw_fraction >= 0.15 ? "Intact" : "Fragmented"
+        ))
+    end
+
+    return results
+end
+
+"""
+Validate design against Q1 literature targets.
+"""
+function validate_design(geometry::NamedTuple, tissue::TissueRequirements)
+    validations = []
+    all_pass = true
+
+    # Porosity check
+    phi_min, phi_max = tissue.target_porosity
+    if phi_min <= geometry.porosity <= phi_max
+        push!(validations, (param="Porosity", value=geometry.porosity,
+                           target="$(phi_min*100)-$(phi_max*100)%", status="PASS"))
+    else
+        push!(validations, (param="Porosity", value=geometry.porosity,
+                           target="$(phi_min*100)-$(phi_max*100)%", status="FAIL"))
+        all_pass = false
+    end
+
+    # Pore size check
+    pore_min, pore_max = tissue.target_pore_size_um
+    if pore_min <= geometry.pore_size_um <= pore_max
+        push!(validations, (param="Pore size", value=geometry.pore_size_um,
+                           target="$(pore_min)-$(pore_max) um", status="PASS"))
+    else
+        push!(validations, (param="Pore size", value=geometry.pore_size_um,
+                           target="$(pore_min)-$(pore_max) um", status="FAIL"))
+        all_pass = false
+    end
+
+    # Modulus check
+    E_min, E_max = tissue.target_modulus_mpa
+    if E_min <= geometry.E_scaffold_mpa <= E_max
+        push!(validations, (param="Modulus", value=geometry.E_scaffold_mpa,
+                           target="$(E_min)-$(E_max) MPa", status="PASS"))
+    else
+        push!(validations, (param="Modulus", value=geometry.E_scaffold_mpa,
+                           target="$(E_min)-$(E_max) MPa", status="FAIL"))
+        all_pass = false
+    end
+
+    # Interconnectivity estimate (based on window/pore ratio)
+    intercon = geometry.window_size_um / geometry.pore_size_um > 0.3 ? 0.9 : 0.7
+    if intercon >= 0.9
+        push!(validations, (param="Interconnectivity", value=intercon,
+                           target=">90%", status="PASS"))
+    else
+        push!(validations, (param="Interconnectivity", value=intercon,
+                           target=">90%", status="WARN"))
+    end
+
+    return (validations=validations, all_pass=all_pass, source=tissue.source)
+end
+
+# ============================================================================
+# MAIN DESIGN WORKFLOW
+# ============================================================================
+
+"""
+Complete scaffold design workflow.
+"""
+function design_scaffold(tissue_type::Symbol;
+                         require_fda::Bool=true,
+                         verbose::Bool=true)
+    if !haskey(TISSUE_REQUIREMENTS, tissue_type)
+        error("Unknown tissue type: $tissue_type. Available: $(keys(TISSUE_REQUIREMENTS))")
+    end
+
+    tissue = TISSUE_REQUIREMENTS[tissue_type]
+
+    if verbose
+        println("=" ^ 70)
+        println("SCAFFOLD DESIGN FOR: $(tissue.name)")
+        println("=" ^ 70)
+        println()
+        println("TISSUE REQUIREMENTS ($(tissue.source))")
+        println("-" ^ 70)
+        println(@sprintf("  Healing time: %.0f-%.0f weeks", tissue.healing_time_weeks...))
+        println(@sprintf("  Target porosity: %.0f-%.0f%%", tissue.target_porosity[1]*100, tissue.target_porosity[2]*100))
+        println(@sprintf("  Target pore size: %.0f-%.0f um", tissue.target_pore_size_um...))
+        println(@sprintf("  Target modulus: %.1f-%.1f MPa", tissue.target_modulus_mpa...))
+        println(@sprintf("  Cell type: %s", tissue.cell_type))
+        println(@sprintf("  Vascularization critical: %s", tissue.vascularization_critical))
+        println(@sprintf("  Load bearing: %s", tissue.load_bearing))
+        println()
+    end
+
+    # Step 1: Select polymer
+    if verbose
+        println("POLYMER SELECTION")
+        println("-" ^ 70)
+    end
+
+    rankings = select_polymer(tissue; require_fda=require_fda)
+
+    if verbose
+        for (i, r) in enumerate(rankings[1:min(3, length(rankings))])
+            println(@sprintf("%d. %s (score: %.0f)", i, r.polymer.name, r.score))
+            for reason in r.reasons
+                println("   - $reason")
+            end
+            println()
+        end
+    end
+
+    best_polymer = rankings[1].polymer
+
+    # Step 2: Optimize geometry
+    if verbose
+        println("OPTIMAL GEOMETRY")
+        println("-" ^ 70)
+    end
+
+    geometry = optimize_geometry(best_polymer, tissue)
+
+    if verbose
+        println(@sprintf("  Porosity: %.1f%%", geometry.porosity * 100))
+        println(@sprintf("  Pore size: %.0f um", geometry.pore_size_um))
+        println(@sprintf("  Window size: %.0f um", geometry.window_size_um))
+        println(@sprintf("  Wall thickness: %.0f um", geometry.wall_thickness_um))
+        println(@sprintf("  Scaffold E: %.1f MPa", geometry.E_scaffold_mpa))
+        println(@sprintf("  Scaffold strength: %.2f MPa", geometry.sigma_scaffold_mpa))
+        println()
+    end
+
+    # Step 3: Validate design
+    if verbose
+        println("VALIDATION (Q1 Literature)")
+        println("-" ^ 70)
+    end
+
+    validation = validate_design(geometry, tissue)
+
+    if verbose
+        for v in validation.validations
+            status_str = v.status == "PASS" ? "[PASS]" : v.status == "FAIL" ? "[FAIL]" : "[WARN]"
+            if typeof(v.value) <: Number
+                println(@sprintf("  %s %s: %.2f (target: %s)", status_str, v.param, v.value, v.target))
+            else
+                println(@sprintf("  %s %s: %s (target: %s)", status_str, v.param, v.value, v.target))
+            end
+        end
+        println(@sprintf("\n  Source: %s", validation.source))
+        println()
+    end
+
+    # Step 4: Degradation profile
+    if verbose
+        println("DEGRADATION PROFILE")
+        println("-" ^ 70)
+    end
+
+    profile = predict_degradation_profile(best_polymer, geometry)
+
+    if verbose
+        println(@sprintf("  %-8s %-10s %-10s %-10s %-10s %s",
+                        "Week", "MW%", "Mass%", "Porosity%", "E(MPa)", "Status"))
+        for p in profile[1:4:end]  # Every 4th entry
+            println(@sprintf("  %-8.0f %-10.1f %-10.1f %-10.1f %-10.2f %s",
+                            p.time_weeks, p.mw_fraction*100, p.mass_remaining*100,
+                            p.porosity*100, p.E_mpa, p.integrity))
+        end
+        println()
+    end
+
+    # Summary
+    if verbose
+        println("=" ^ 70)
+        println("DESIGN SUMMARY")
+        println("=" ^ 70)
+        println(@sprintf("  Polymer: %s (%s)", best_polymer.name, best_polymer.abbrev))
+        println(@sprintf("  Tissue: %s", tissue.name))
+        println(@sprintf("  Validation: %s", validation.all_pass ? "ALL PASS" : "ISSUES FOUND"))
+        println(@sprintf("  Estimated scaffold life: %.0f-%.0f weeks", best_polymer.degradation_weeks...))
+        println()
+    end
+
+    return (
+        tissue = tissue,
+        polymer = best_polymer,
+        geometry = geometry,
+        validation = validation,
+        profile = profile
+    )
+end
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+function main()
+    println("\n" * "=" ^ 70)
+    println("SCAFFOLD DESIGN OPTIMIZATION EXAMPLES")
+    println("=" ^ 70 * "\n")
+
+    # Example 1: Trabecular bone scaffold
+    design_scaffold(:trabecular_bone)
+
+    println("\n" * "-" ^ 70 * "\n")
+
+    # Example 2: Cartilage scaffold
+    design_scaffold(:articular_cartilage)
+
+    println("\n" * "-" ^ 70 * "\n")
+
+    # Example 3: Skin scaffold (fast healing)
+    design_scaffold(:skin)
+
+    return nothing
+end
+
+if abspath(PROGRAM_FILE) == @__FILE__
+    main()
+end
