@@ -124,6 +124,30 @@ const TISSUE_REQUIREMENTS = Dict(
         false,
         "PMC4424662"
     ),
+    :skeletal_muscle => TissueRequirements(
+        "Skeletal Muscle",
+        (4.0, 12.0),       # Moderate healing
+        (0.70, 0.90),      # High porosity for cell infiltration
+        (50.0, 200.0),     # Aligned pores for myofiber formation
+        (0.01, 0.1),       # Very soft (10-100 kPa) - allows softer hydrogels
+        (0.005, 0.05),     # Low strength
+        :myoblast,
+        true,              # Vascularization critical
+        false,             # Contractile, not load bearing
+        "PMC5449418"
+    ),
+    :tendon => TissueRequirements(
+        "Tendon/Ligament",
+        (12.0, 52.0),      # Slow healing (avascular)
+        (0.50, 0.80),      # Moderate porosity
+        (50.0, 200.0),     # Aligned pores for collagen fibers
+        (200.0, 2000.0),   # Stiff (200-2000 MPa)
+        (20.0, 100.0),     # High tensile strength
+        :tenocyte,
+        false,             # Limited vascularization
+        true,              # Load bearing (tensile)
+        "PMC4082975"
+    ),
 )
 
 # ============================================================================
