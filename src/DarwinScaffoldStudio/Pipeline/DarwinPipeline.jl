@@ -13,6 +13,50 @@ export run_darwin_pipeline, PipelineConfig, PipelineResult
 const DEFAULT_REPORT_DIR = "results"
 const DEFAULT_REPORT_SUFFIX = "_report.md"
 
+# Valid input types for pipeline
+const VALID_INPUT_TYPES = Set(["microct", "sem", "idea"])
+
+# Valid target tissues
+const VALID_TARGET_TISSUES = Set(["bone", "skin", "cartilage", "neural", "vascular", "muscle", "tendon"])
+
+# Valid optimization goals
+const VALID_OPTIMIZATION_GOALS = Set(["porosity", "strength", "bioactivity", "permeability", "degradation"])
+
+# =============================================================================
+# Validation Functions
+# =============================================================================
+
+"""
+    validate_pipeline_config(input_type, target_tissue, optimization_goals)
+
+Validate pipeline configuration parameters.
+Throws ArgumentError for invalid values.
+"""
+function validate_pipeline_config(input_type::String, target_tissue::String,
+                                  optimization_goals::Vector{String})
+    # Validate input_type
+    if !(input_type in VALID_INPUT_TYPES)
+        valid_types = join(VALID_INPUT_TYPES, ", ")
+        throw(ArgumentError("Invalid input_type '$input_type'. Must be one of: $valid_types"))
+    end
+
+    # Validate target_tissue
+    if !(target_tissue in VALID_TARGET_TISSUES)
+        valid_tissues = join(VALID_TARGET_TISSUES, ", ")
+        throw(ArgumentError("Invalid target_tissue '$target_tissue'. Must be one of: $valid_tissues"))
+    end
+
+    # Validate optimization_goals
+    for goal in optimization_goals
+        if !(goal in VALID_OPTIMIZATION_GOALS)
+            valid_goals = join(VALID_OPTIMIZATION_GOALS, ", ")
+            throw(ArgumentError("Invalid optimization goal '$goal'. Must be one of: $valid_goals"))
+        end
+    end
+
+    return true
+end
+
 """
 Darwin Unified Pipeline 🧬
 
@@ -31,7 +75,7 @@ struct PipelineConfig
     use_hausen_special::Bool
     report_dir::String  # Output directory for reports
 
-    # Constructor with default report_dir
+    # Constructor with validation and default report_dir
     function PipelineConfig(
         project_name::String,
         input_type::String,
@@ -42,6 +86,9 @@ struct PipelineConfig
         use_hausen_special::Bool,
         report_dir::String=DEFAULT_REPORT_DIR
     )
+        # Validate configuration before creating
+        validate_pipeline_config(input_type, target_tissue, optimization_goals)
+
         new(project_name, input_type, input_data, target_tissue,
             optimization_goals, use_quantum, use_hausen_special, report_dir)
     end

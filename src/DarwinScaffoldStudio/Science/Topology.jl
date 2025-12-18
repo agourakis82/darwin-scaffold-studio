@@ -8,14 +8,17 @@ using ImageFiltering
 export compute_kec_metrics
 
 """
-    compute_kec_metrics(volume::AbstractArray, voxel_size::Float64)
+    compute_kec_metrics(volume::AbstractArray, voxel_size::Float64) -> Dict{String, Float64}
 
 Compute the "KEC" metrics for the thesis:
 - K: Curvature (Mean and Gaussian)
 - E: Entropy (Shannon entropy of pore distribution)
 - C: Coherence (Spatial autocorrelation)
+
+# Returns
+- Dict with keys: curvature_mean, curvature_gaussian, entropy_shannon, coherence_spatial
 """
-function compute_kec_metrics(volume::AbstractArray, voxel_size::Float64)
+function compute_kec_metrics(volume::AbstractArray, voxel_size::Float64)::Dict{String, Float64}
     # 1. Curvature (K)
     # We approximate curvature from the binary volume surface
     # In a real thesis, we'd use the mesh, but for volume analysis we can use gradients
@@ -38,12 +41,15 @@ function compute_kec_metrics(volume::AbstractArray, voxel_size::Float64)
 end
 
 """
-    compute_curvature_volume(volume, voxel_size)
+    compute_curvature_volume(volume, voxel_size) -> Tuple{Float64, Float64}
 
 Estimate mean and gaussian curvature from implicit surface (level set).
 Reference: Goldman (2005) "Curvature formulas for implicit curves and surfaces"
+
+# Returns
+- Tuple of (mean_curvature, gaussian_curvature)
 """
-function compute_curvature_volume(volume::AbstractArray, voxel_size::Float64)
+function compute_curvature_volume(volume::AbstractArray, voxel_size::Float64)::Tuple{Float64, Float64}
     # Smooth the binary volume to get a continuous field (implicit surface)
     # Gaussian smoothing with sigma=1.0
     field = imfilter(Float64.(volume), Kernel.gaussian(1.0))
@@ -92,12 +98,15 @@ function compute_curvature_volume(volume::AbstractArray, voxel_size::Float64)
 end
 
 """
-    compute_shannon_entropy(volume)
+    compute_shannon_entropy(volume) -> Float64
 
 Compute Shannon entropy of the pore distribution.
 Higher entropy = more heterogeneous/disordered structure.
+
+# Returns
+- Shannon entropy value (nats)
 """
-function compute_shannon_entropy(volume::AbstractArray)
+function compute_shannon_entropy(volume::AbstractArray)::Float64
     # Calculate local porosity in windows
     # Window size: 10x10x10 voxels
     window_size = (10, 10, 10)
@@ -140,11 +149,14 @@ function compute_shannon_entropy(volume::AbstractArray)
 end
 
 """
-    compute_spatial_coherence(volume)
+    compute_spatial_coherence(volume) -> Float64
 
 Compute spatial coherence length using autocorrelation.
+
+# Returns
+- Spatial coherence index (0-1 range, higher = more correlated)
 """
-function compute_spatial_coherence(volume::AbstractArray)
+function compute_spatial_coherence(volume::AbstractArray)::Float64
     # 1D autocorrelation along axes
     # We take the average of X, Y, Z directions
     
