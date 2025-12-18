@@ -104,6 +104,11 @@ module Ontology
 
     # OntologyManager also needs OBOFoundry, include it here
     @info "Loading OntologyManager (3-tier lookup with FAIR export)..."
+    # Load focused submodules first
+    include("DarwinScaffoldStudio/Ontology/SemanticSimilarity.jl")
+    include("DarwinScaffoldStudio/Ontology/ScaffoldRecommendations.jl")
+    include("DarwinScaffoldStudio/Ontology/AnnotationValidation.jl")
+    # Then the main manager that ties them together
     include("DarwinScaffoldStudio/Ontology/OntologyManager.jl")
 
     # Re-export everything
@@ -119,6 +124,9 @@ module Ontology
     using .MaterialLibraryExtended
     using .CrossOntologyRelations
     using .OntologyManager
+    using .SemanticSimilarity
+    using .ScaffoldRecommendations
+    using .AnnotationValidation
     # New libraries
     using .MolecularPropertiesLibrary
     using .PhysicalPropertiesLibrary
@@ -287,6 +295,8 @@ using .Optimization: optimize_scaffold_thesis
 using .BayesianOptimization: BayesianOptimizer, MultiObjectiveBO, TuRBO, NSGA2,
     GaussianProcess, ExpectedImprovement, UpperConfidenceBound,
     optimize!, suggest_next, compute_pareto_front, hypervolume
+using .Core: Agent, AgentTool, AgentWorkspace, ChatMessage, ScaffoldData,
+    ToolResult, execute_tool, run_agent
 
 # Export public API
 export
@@ -335,6 +345,15 @@ export
     # Memory (Persistent Knowledge)
     Memory,
     # Generative (Text-to-Scaffold)
-    Generative
+    Generative,
+    # Agents (Type-safe AI agents)
+    Agent,
+    AgentTool,
+    AgentWorkspace,
+    ChatMessage,
+    ScaffoldData,
+    ToolResult,
+    execute_tool,
+    run_agent
 
 end # module

@@ -665,36 +665,127 @@ function compute_scaffold_metrics(volume::Array{Bool, 3},
     )
 end
 
+"""
+    compute_distance_transform(mask::AbstractArray{Bool, 3}) -> Array{Float64, 3}
+
+Compute Euclidean Distance Transform using Meijster's linear-time algorithm.
+Returns distance to nearest false voxel for each true voxel (0 for false voxels).
+
+Complexity: O(n³) instead of naive O(n³ × r³)
+
+Reference: Meijster et al. (2000) "A General Algorithm for Computing Distance
+Transforms in Linear Time"
+"""
 function compute_distance_transform(mask::AbstractArray{Bool, 3})
-    # Simplified 3D distance transform
     dims = size(mask)
-    distances = zeros(Float64, dims)
+    INF = sum(dims)^2  # Squared infinity (larger than any possible squared distance)
 
-    for i in 1:dims[1], j in 1:dims[2], k in 1:dims[3]
-        if mask[i,j,k]
-            # Find distance to nearest false
-            min_dist = Inf
-            search_radius = min(10, minimum(dims) ÷ 2)
+    # Work with squared distances, take sqrt at the end
+    G = fill(INF, dims)
 
-            for di in -search_radius:search_radius
-                for dj in -search_radius:search_radius
-                    for dk in -search_radius:search_radius
-                        ni, nj, nk = i+di, j+dj, k+dk
-                        if 1 <= ni <= dims[1] && 1 <= nj <= dims[2] && 1 <= nk <= dims[3]
-                            if !mask[ni, nj, nk]
-                                d = sqrt(di^2 + dj^2 + dk^2)
-                                min_dist = min(min_dist, d)
-                            end
-                        end
-                    end
-                end
+    # Phase 1: Transform along first dimension (x)
+    for j in 1:dims[2], k in 1:dims[3]
+        # Forward scan
+        if !mask[1, j, k]
+            G[1, j, k] = 0
+        end
+        for i in 2:dims[1]
+            if !mask[i, j, k]
+                G[i, j, k] = 0
+            else
+                G[i, j, k] = G[i-1, j, k] + 1
             end
-
-            distances[i,j,k] = isinf(min_dist) ? search_radius : min_dist
+        end
+        # Backward scan
+        for i in (dims[1]-1):-1:1
+            if G[i+1, j, k] < G[i, j, k]
+                G[i, j, k] = G[i+1, j, k] + 1
+            end
         end
     end
 
-    distances
+    # Phase 2: Transform along second dimension (y)
+    # Uses Voronoi-based optimization
+    G2 = fill(INF, dims)
+    for i in 1:dims[1], k in 1:dims[3]
+        _edt_voronoi_1d!(view(G, i, :, k), view(G2, i, :, k), dims[2])
+    end
+
+    # Phase 3: Transform along third dimension (z)
+    result = zeros(Float64, dims)
+    for i in 1:dims[1], j in 1:dims[2]
+        _edt_voronoi_1d!(view(G2, i, j, :), view(result, i, j, :), dims[3])
+    end
+
+    # Convert squared distances to actual distances
+    @. result = sqrt(result)
+
+    return result
+end
+
+"""
+Helper: 1D Voronoi-based distance transform (Meijster algorithm phase 2/3)
+Transforms squared distances along one dimension.
+"""
+function _edt_voronoi_1d!(g::AbstractVector, dt::AbstractVector, n::Int)
+    INF = n^2 * 4  # Large value
+
+    # Parabola positions and intersection points
+    s = zeros(Int, n)    # Voronoi sites (positions of parabola vertices)
+    t = zeros(Float64, n+1)  # Intersection points between parabolas
+
+    q = 0  # Number of parabolas in lower envelope
+
+    # Build lower envelope of parabolas
+    for u in 1:n
+        gu = g[u]
+        if gu >= INF
+            continue
+        end
+
+        # f(x, u) = (x - u)² + g[u]²
+        # Find where parabola u intersects with rightmost parabola in envelope
+        while q > 0
+            v = s[q]
+            gv = g[v]
+            # Intersection of parabolas at u and v:
+            # (x-u)² + gu² = (x-v)² + gv²
+            # x = (u² + gu² - v² - gv²) / (2(u-v))
+            sep = ((u^2 + gu^2) - (v^2 + gv^2)) / (2.0 * (u - v))
+
+            if sep > t[q]
+                break
+            end
+            q -= 1
+        end
+
+        q += 1
+        s[q] = u
+        if q == 1
+            t[q] = -Inf
+        else
+            v = s[q-1]
+            gv = g[v]
+            t[q] = ((u^2 + gu^2) - (v^2 + gv^2)) / (2.0 * (u - v))
+        end
+        t[q+1] = Inf
+    end
+
+    if q == 0
+        # All values were INF - no valid parabolas
+        fill!(dt, INF)
+        return
+    end
+
+    # Scan and compute distance transform
+    k = 1
+    for u in 1:n
+        while t[k+1] < u
+            k += 1
+        end
+        v = s[k]
+        dt[u] = (u - v)^2 + g[v]^2
+    end
 end
 
 function compute_interconnectivity(volume::Array{Bool, 3})

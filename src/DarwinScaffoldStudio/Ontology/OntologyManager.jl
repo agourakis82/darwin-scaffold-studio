@@ -32,6 +32,14 @@ using Dates
 using ..OBOFoundry: OBOTerm, UBERON, CL, CHEBI, NCIT, GO, BTO, DOID
 using ..OBOFoundry: lookup_term as core_lookup, get_iri
 
+# Import focused submodules for configure! function access
+# Note: We don't import the individual symbols because OntologyManager still has
+# its own definitions. Future cleanup should remove the duplicates from this file.
+using ..SemanticSimilarity
+using ..ScaffoldRecommendations
+using ..AnnotationValidation
+
+# Core exports
 export OntologyConfig, init_ontology_system, shutdown_ontology_system
 export smart_lookup, batch_lookup, search_terms
 export get_ancestors, get_descendants, get_related_terms
@@ -39,24 +47,24 @@ export export_rdf, export_jsonld, export_annotation
 export OntologyStats, get_stats, clear_cache
 export ONTOLOGY_PREFIXES
 
-# New exports: Semantic Similarity
+# Re-export from SemanticSimilarity submodule
 export semantic_similarity, find_similar_terms, compute_ic
 export SemanticSimilarityMethod, LinSimilarity, WuPalmerSimilarity, ResnikSimilarity
 
-# New exports: Tissue Recommendations
+# Re-export from ScaffoldRecommendations submodule
 export get_scaffold_recommendations, ScaffoldRecommendation
 export get_cells_for_tissue, get_materials_for_application
 export get_biological_processes, recommend_pore_size
 
-# New exports: BioPortal API
-export lookup_bioportal, search_bioportal
-
-# New exports: Graph Visualization
-export export_dot, export_graphml, build_ontology_subgraph
-
-# New exports: Annotation Validation
+# Re-export from AnnotationValidation submodule
 export validate_annotation, AnnotationValidationResult
 export check_tissue_cell_compatibility, check_material_application
+
+# BioPortal API exports
+export lookup_bioportal, search_bioportal
+
+# Graph Visualization exports
+export export_dot, export_graphml, build_ontology_subgraph
 
 #=============================================================================
   CONFIGURATION
@@ -913,556 +921,40 @@ function Base.show(io::IO, stats::OntologyStats)
     println(io, "  Cache: $(stats.cached_terms) terms ($(round(stats.cache_size_mb, digits=2)) MB)")
 end
 
-#=============================================================================
-  SEMANTIC SIMILARITY (Real Algorithms)
-
-  Implements standard ontology similarity measures:
-  - Wu-Palmer (1994): Path-based using LCA depth
-  - Resnik (1995): Information Content of LCA
-  - Lin (1998): Normalized IC similarity
-
-  References:
-  - Wu & Palmer, 1994. Verb semantics and lexical selection
-  - Resnik, 1995. Using information content to evaluate semantic similarity
-  - Lin, 1998. An information-theoretic definition of similarity
-=============================================================================#
-
-"""Semantic similarity calculation methods."""
-abstract type SemanticSimilarityMethod end
-struct WuPalmerSimilarity <: SemanticSimilarityMethod end
-struct ResnikSimilarity <: SemanticSimilarityMethod end
-struct LinSimilarity <: SemanticSimilarityMethod end
-
-# Precomputed term frequencies for IC calculation (from OBO Foundry corpus statistics)
-# These are approximate frequencies based on annotation corpus sizes
-const TERM_FREQUENCIES = Dict{String,Float64}()
-const TOTAL_ANNOTATIONS = Ref{Float64}(1_000_000.0)  # Approximate corpus size
-
-"""
-    get_depth(id::String) -> Int
-
-Get depth of term in ontology hierarchy (distance from root).
-"""
-function get_depth(id::String)
-    ancestors = get_ancestors(id; max_depth=20)
-    return length(ancestors)
-end
-
-"""
-    get_lowest_common_ancestor(id1::String, id2::String) -> Union{String, Nothing}
-
-Find the Lowest Common Ancestor (LCA) of two terms.
-Returns the most specific term that is an ancestor of both.
-"""
-function get_lowest_common_ancestor(id1::String, id2::String)
-    # Get all ancestors for both terms
-    ancestors1 = Set{String}([id1])
-    for a in get_ancestors(id1; max_depth=15)
-        push!(ancestors1, a.id)
-    end
-
-    ancestors2 = Set{String}([id2])
-    for a in get_ancestors(id2; max_depth=15)
-        push!(ancestors2, a.id)
-    end
-
-    # Find common ancestors
-    common = intersect(ancestors1, ancestors2)
-    isempty(common) && return nothing
-
-    # Find the deepest (most specific) common ancestor
-    max_depth = -1
-    lca = nothing
-    for anc_id in common
-        d = get_depth(anc_id)
-        if d > max_depth
-            max_depth = d
-            lca = anc_id
-        end
-    end
-
-    return lca
-end
-
-"""
-    compute_ic(id::String) -> Float64
-
-Compute Information Content (IC) of a term.
-IC(c) = -log(P(c)) where P(c) is probability of term occurrence.
-
-Uses corpus-based frequency estimation with fallback to structure-based.
-"""
-function compute_ic(id::String)
-    # Check if we have precomputed frequency
-    if haskey(TERM_FREQUENCIES, id)
-        freq = TERM_FREQUENCIES[id]
-        return -log(freq / TOTAL_ANNOTATIONS[])
-    end
-
-    # Fallback: estimate IC from ontology structure
-    # More specific terms (more descendants) have higher IC
-    descendants = get_descendants(id; max_depth=5)
-    n_descendants = length(descendants) + 1  # +1 for self
-
-    # Estimate probability inversely proportional to specificity
-    # Root terms have low IC, leaf terms have high IC
-    depth = get_depth(id)
-
-    # Heuristic: combine depth and descendants for IC estimate
-    # Deeper terms with fewer descendants = higher IC
-    estimated_prob = 1.0 / (depth + 1) * (n_descendants / 100.0 + 0.01)
-    estimated_prob = clamp(estimated_prob, 1e-10, 0.99)
-
-    return -log(estimated_prob)
-end
-
-"""
-    semantic_similarity(id1::String, id2::String; method=WuPalmerSimilarity()) -> Float64
-
-Compute semantic similarity between two ontology terms.
-
-# Methods
-- `WuPalmerSimilarity()`: 2*depth(LCA) / (depth(c1) + depth(c2))
-- `ResnikSimilarity()`: IC(LCA)
-- `LinSimilarity()`: 2*IC(LCA) / (IC(c1) + IC(c2))
-
-# Returns
-Similarity score in [0, 1] for Wu-Palmer and Lin, unbounded for Resnik.
-"""
-function semantic_similarity(id1::String, id2::String; method::SemanticSimilarityMethod=WuPalmerSimilarity())
-    # Same term = maximum similarity
-    id1 == id2 && return 1.0
-
-    # Find LCA
-    lca = get_lowest_common_ancestor(id1, id2)
-    isnothing(lca) && return 0.0
-
-    return _compute_similarity(method, id1, id2, lca)
-end
-
-function _compute_similarity(::WuPalmerSimilarity, id1::String, id2::String, lca::String)
-    depth1 = get_depth(id1)
-    depth2 = get_depth(id2)
-    depth_lca = get_depth(lca)
-
-    denominator = depth1 + depth2
-    denominator == 0 && return 0.0
-
-    return 2.0 * depth_lca / denominator
-end
-
-function _compute_similarity(::ResnikSimilarity, id1::String, id2::String, lca::String)
-    return compute_ic(lca)
-end
-
-function _compute_similarity(::LinSimilarity, id1::String, id2::String, lca::String)
-    ic1 = compute_ic(id1)
-    ic2 = compute_ic(id2)
-    ic_lca = compute_ic(lca)
-
-    denominator = ic1 + ic2
-    denominator == 0.0 && return 0.0
-
-    return 2.0 * ic_lca / denominator
-end
-
-"""
-    find_similar_terms(id::String, candidates::Vector{String};
-                       method=WuPalmerSimilarity(), top_k::Int=10) -> Vector{Tuple{String, Float64}}
-
-Find most similar terms from a candidate set.
-
-# Returns
-Vector of (term_id, similarity_score) tuples, sorted by similarity descending.
-"""
-function find_similar_terms(id::String, candidates::Vector{String};
-    method::SemanticSimilarityMethod=WuPalmerSimilarity(),
-    top_k::Int=10)
-    similarities = Tuple{String,Float64}[]
-
-    for cand in candidates
-        cand == id && continue
-        sim = semantic_similarity(id, cand; method=method)
-        push!(similarities, (cand, sim))
-    end
-
-    # Sort by similarity descending
-    sort!(similarities, by=x -> -x[2])
-
-    return first(similarities, top_k)
-end
-
-#=============================================================================
-  TISSUE-SPECIFIC RECOMMENDATIONS
-
-  Evidence-based recommendations from Q1 literature:
-  - Murphy et al. 2010: Pore sizes for bone (100-200μm)
-  - Karageorgiou & Kaplan 2005: Porosity 90%+ for bone
-  - Engler et al. 2006: Substrate stiffness for stem cell differentiation
-  - Hutmacher 2000: Scaffold design criteria
-=============================================================================#
-
-"""
-    ScaffoldRecommendation
-
-Evidence-based recommendation for scaffold design.
-"""
-struct ScaffoldRecommendation
-    category::Symbol           # :cell, :material, :process, :parameter
-    term_id::Union{String,Nothing}  # OBO term ID if applicable
-    name::String
-    rationale::String          # Why this is recommended
-    evidence_level::Symbol     # :high (RCT/meta), :medium (cohort), :low (case/expert)
-    references::Vector{String} # DOI or PMID
-    parameters::Dict{String,Any}  # Specific values (e.g., pore_size_um)
-end
-
-# Knowledge base: Tissue -> Recommended cells, materials, processes
-# Based on Q1 tissue engineering literature
-const TISSUE_RECOMMENDATIONS = Dict{String,Dict{Symbol,Vector{NamedTuple}}}(
-    # Bone tissue recommendations
-    "UBERON:0002481" => Dict(  # bone tissue
-        :cells => [
-            (id="CL:0000062", name="osteoblast", rationale="Primary bone-forming cells", evidence=:high,
-                refs=["10.1038/nrrheum.2015.40"]),
-            (id="CL:0000134", name="mesenchymal stem cell", rationale="Osteogenic differentiation potential", evidence=:high,
-                refs=["10.1002/stem.684"]),
-            (id="CL:0000092", name="osteoclast", rationale="Bone remodeling, required for integration", evidence=:medium,
-                refs=["10.1016/j.bone.2015.03.017"]),
-        ],
-        :materials => [
-            (id="CHEBI:53719", name="hydroxyapatite", rationale="Osteoconductive, mimics bone mineral", evidence=:high,
-                refs=["10.1002/jbm.a.32794"], params=Dict("Ca_P_ratio" => 1.67)),
-            (id="CHEBI:60027", name="tricalcium phosphate", rationale="Resorbable, promotes remodeling", evidence=:high,
-                refs=["10.1016/j.actbio.2010.09.019"]),
-            (id="CHEBI:27899", name="collagen type I", rationale="Major organic bone component", evidence=:high,
-                refs=["10.1016/j.biomaterials.2006.02.016"]),
-        ],
-        :processes => [
-            (id="GO:0001503", name="ossification", rationale="Target biological process", evidence=:high,
-                refs=["10.1038/nature10290"]),
-            (id="GO:0030282", name="bone mineralization", rationale="Required for mechanical strength", evidence=:high,
-                refs=["10.1016/j.bone.2012.02.007"]),
-            (id="GO:0045453", name="bone resorption", rationale="Remodeling for integration", evidence=:medium,
-                refs=["10.1016/j.bone.2015.03.017"]),
-        ],
-        :parameters => [
-            (name="pore_size_um", min=100, optimal=150, max=300, rationale="Murphy et al. 2010: optimal for bone ingrowth",
-                refs=["10.1016/j.biomaterials.2009.09.063"]),
-            (name="porosity_percent", min=70, optimal=90, max=95, rationale="Karageorgiou 2005: high porosity for vascularization",
-                refs=["10.1016/j.biomaterials.2005.01.016"]),
-            (name="interconnectivity_percent", min=80, optimal=95, max=100, rationale="Required for nutrient transport",
-                refs=["10.1089/ten.2006.12.3307"]),
-            (name="elastic_modulus_mpa", min=100, optimal=500, max=20000, rationale="Match trabecular bone (100-500 MPa)",
-                refs=["10.1016/j.jmbbm.2012.01.006"]),
-        ]
-    ),
-
-    # Cartilage tissue recommendations
-    "UBERON:0002418" => Dict(  # cartilage tissue
-        :cells => [
-            (id="CL:0000138", name="chondrocyte", rationale="Native cartilage cells, maintain ECM", evidence=:high,
-                refs=["10.1016/j.joca.2013.07.009"]),
-            (id="CL:0000134", name="mesenchymal stem cell", rationale="Chondrogenic potential, less donor morbidity", evidence=:high,
-                refs=["10.1002/art.21972"]),
-        ],
-        :materials => [
-            (id="CHEBI:16991", name="hyaluronic acid", rationale="Native cartilage GAG, supports chondrogenesis", evidence=:high,
-                refs=["10.1016/j.biomaterials.2005.07.013"]),
-            (id="CHEBI:27899", name="collagen type II", rationale="Major cartilage collagen", evidence=:high,
-                refs=["10.1016/j.actbio.2013.01.017"]),
-            (id="CHEBI:16150", name="alginate", rationale="Maintains chondrocyte phenotype in 3D", evidence=:medium,
-                refs=["10.1016/j.biomaterials.2006.09.027"]),
-        ],
-        :processes => [
-            (id="GO:0051216", name="cartilage development", rationale="Target developmental program", evidence=:high,
-                refs=["10.1016/j.devcel.2005.04.003"]),
-            (id="GO:0030199", name="collagen fibril organization", rationale="ECM architecture critical", evidence=:medium,
-                refs=["10.1016/j.matbio.2014.08.001"]),
-        ],
-        :parameters => [
-            (name="pore_size_um", min=50, optimal=100, max=200, rationale="Smaller pores for cartilage vs bone",
-                refs=["10.1016/j.biomaterials.2010.01.116"]),
-            (name="porosity_percent", min=70, optimal=85, max=95, rationale="Balance cell seeding and mechanics",
-                refs=["10.1016/j.actbio.2009.12.006"]),
-            (name="elastic_modulus_mpa", min=0.5, optimal=1.0, max=10.0, rationale="Match articular cartilage",
-                refs=["10.1016/j.jbiomech.2009.10.015"]),
-        ]
-    ),
-
-    # Skin/dermis recommendations
-    "UBERON:0002067" => Dict(  # dermis
-        :cells => [
-            (id="CL:0000057", name="fibroblast", rationale="Primary dermis cell, collagen production", evidence=:high,
-                refs=["10.1016/j.biomaterials.2013.03.024"]),
-            (id="CL:0000312", name="keratinocyte", rationale="Epidermis regeneration", evidence=:high,
-                refs=["10.1016/j.biomaterials.2012.01.015"]),
-            (id="CL:0000115", name="endothelial cell", rationale="Vascularization essential for thick grafts", evidence=:medium,
-                refs=["10.1016/j.addr.2010.11.001"]),
-        ],
-        :materials => [
-            (id="CHEBI:27899", name="collagen type I", rationale="Major dermis component", evidence=:high,
-                refs=["10.1016/j.biomaterials.2013.03.024"]),
-            (id="CHEBI:28815", name="fibrin", rationale="Natural wound healing matrix", evidence=:high,
-                refs=["10.1016/j.biomaterials.2010.01.076"]),
-        ],
-        :processes => [
-            (id="GO:0042060", name="wound healing", rationale="Primary goal of skin scaffolds", evidence=:high,
-                refs=["10.1038/nrm.2016.109"]),
-            (id="GO:0001525", name="angiogenesis", rationale="Vascularization for graft survival", evidence=:high,
-                refs=["10.1016/j.addr.2010.11.001"]),
-        ],
-        :parameters => [
-            (name="pore_size_um", min=20, optimal=100, max=200, rationale="Fibroblast migration optimal range",
-                refs=["10.1016/j.biomaterials.2010.03.019"]),
-            (name="porosity_percent", min=60, optimal=80, max=90, rationale="Balance cell infiltration and mechanics",
-                refs=["10.1016/j.biomaterials.2013.03.024"]),
-        ]
-    ),
-
-    # Cardiac tissue recommendations
-    "UBERON:0002349" => Dict(  # myocardium
-        :cells => [
-            (id="CL:0000746", name="cardiomyocyte", rationale="Contractile cardiac cells", evidence=:high,
-                refs=["10.1038/nature13985"]),
-            (id="CL:0000134", name="mesenchymal stem cell", rationale="Paracrine effects, reduce fibrosis", evidence=:medium,
-                refs=["10.1016/j.jacc.2012.05.012"]),
-            (id="CL:0010020", name="cardiac fibroblast", rationale="ECM production, electrical coupling support", evidence=:medium,
-                refs=["10.1016/j.yjmcc.2015.03.016"]),
-        ],
-        :materials => [
-            (id="CHEBI:28815", name="fibrin", rationale="Injectable, supports cell survival", evidence=:high,
-                refs=["10.1016/j.jacc.2016.02.057"]),
-            (id="CHEBI:27899", name="collagen type I", rationale="Cardiac ECM component", evidence=:medium,
-                refs=["10.1016/j.biomaterials.2014.03.005"]),
-        ],
-        :processes => [
-            (id="GO:0060048", name="cardiac muscle contraction", rationale="Functional goal", evidence=:high,
-                refs=["10.1038/nature13985"]),
-            (id="GO:0055017", name="cardiac muscle tissue development", rationale="Regeneration program", evidence=:high,
-                refs=["10.1016/j.cell.2012.11.053"]),
-        ],
-        :parameters => [
-            (name="elastic_modulus_kpa", min=10, optimal=50, max=100, rationale="Match native myocardium stiffness",
-                refs=["10.1016/j.biomaterials.2010.01.033"]),
-            (name="conductivity_s_m", min=0.1, optimal=0.5, max=1.0, rationale="Electrical propagation",
-                refs=["10.1016/j.actbio.2014.09.036"]),
-        ]
-    ),
-
-    # Neural tissue recommendations
-    "UBERON:0001017" => Dict(  # central nervous system
-        :cells => [
-            (id="CL:0000540", name="neuron", rationale="Functional neural cells", evidence=:high,
-                refs=["10.1016/j.biomaterials.2013.06.045"]),
-            (id="CL:0000127", name="astrocyte", rationale="Support cells, guide regeneration", evidence=:medium,
-                refs=["10.1016/j.biomaterials.2012.09.052"]),
-            (id="CL:0000128", name="oligodendrocyte", rationale="Myelination for signal conduction", evidence=:medium,
-                refs=["10.1016/j.stem.2014.07.002"]),
-        ],
-        :materials => [
-            (id="CHEBI:16991", name="hyaluronic acid", rationale="CNS ECM component, hydrogel formation", evidence=:high,
-                refs=["10.1016/j.biomaterials.2013.06.045"]),
-            (id="CHEBI:28790", name="laminin", rationale="Promotes neurite outgrowth", evidence=:high,
-                refs=["10.1016/j.biomaterials.2014.05.003"]),
-        ],
-        :processes => [
-            (id="GO:0007409", name="axonogenesis", rationale="Axon regeneration goal", evidence=:high,
-                refs=["10.1038/nrn.2016.29"]),
-            (id="GO:0048812", name="neuron projection morphogenesis", rationale="Neurite guidance", evidence=:high,
-                refs=["10.1016/j.biomaterials.2013.06.045"]),
-        ],
-        :parameters => [
-            (name="elastic_modulus_kpa", min=0.1, optimal=1.0, max=10.0, rationale="Brain tissue is very soft",
-                refs=["10.1016/j.biomaterials.2010.01.033"]),
-            (name="pore_size_um", min=10, optimal=50, max=100, rationale="Allow neurite ingrowth",
-                refs=["10.1016/j.biomaterials.2012.09.052"]),
-        ]
-    ),
-
-    # Vascular tissue recommendations
-    "UBERON:0001981" => Dict(  # blood vessel
-        :cells => [
-            (id="CL:0000115", name="endothelial cell", rationale="Line vessel lumen, prevent thrombosis", evidence=:high,
-                refs=["10.1016/j.biomaterials.2014.01.078"]),
-            (id="CL:0000192", name="smooth muscle cell", rationale="Vessel wall structure and function", evidence=:high,
-                refs=["10.1016/j.actbio.2014.07.005"]),
-        ],
-        :materials => [
-            (id="CHEBI:53325", name="polycaprolactone", rationale="Biodegradable, mechanical strength", evidence=:high,
-                refs=["10.1016/j.actbio.2010.09.028"]),
-            (id="CHEBI:27899", name="collagen type I", rationale="Vessel wall ECM", evidence=:medium,
-                refs=["10.1016/j.biomaterials.2014.01.078"]),
-        ],
-        :processes => [
-            (id="GO:0001525", name="angiogenesis", rationale="Vessel formation", evidence=:high,
-                refs=["10.1038/nrm3722"]),
-            (id="GO:0001570", name="vasculogenesis", rationale="De novo vessel formation", evidence=:high,
-                refs=["10.1016/j.cell.2014.02.007"]),
-        ],
-        :parameters => [
-            (name="inner_diameter_mm", min=1.0, optimal=4.0, max=10.0, rationale="Small diameter grafts most needed",
-                refs=["10.1016/j.actbio.2014.07.005"]),
-            (name="burst_pressure_mmhg", min=1500, optimal=2000, max=3000, rationale="Match native vessel strength",
-                refs=["10.1016/j.biomaterials.2014.01.078"]),
-        ]
-    ),
-)
-
-"""
-    get_scaffold_recommendations(tissue_id::String) -> Vector{ScaffoldRecommendation}
-
-Get evidence-based scaffold design recommendations for a target tissue.
-
-# Arguments
-- `tissue_id`: UBERON term ID (e.g., "UBERON:0002481" for bone)
-
-# Returns
-Vector of ScaffoldRecommendation with cells, materials, processes, and parameters.
-"""
-function get_scaffold_recommendations(tissue_id::String)
-    recommendations = ScaffoldRecommendation[]
-
-    # Check if we have recommendations for this tissue
-    if !haskey(TISSUE_RECOMMENDATIONS, tissue_id)
-        # Try to find recommendations for parent tissue
-        ancestors = get_ancestors(tissue_id; max_depth=5)
-        found = false
-        for anc in ancestors
-            if haskey(TISSUE_RECOMMENDATIONS, anc.id)
-                tissue_id = anc.id
-                found = true
-                break
-            end
-        end
-        !found && return recommendations
-    end
-
-    tissue_recs = TISSUE_RECOMMENDATIONS[tissue_id]
-
-    # Add cell recommendations
-    if haskey(tissue_recs, :cells)
-        for rec in tissue_recs[:cells]
-            push!(recommendations, ScaffoldRecommendation(
-                :cell,
-                rec.id,
-                rec.name,
-                rec.rationale,
-                rec.evidence,
-                rec.refs,
-                Dict{String,Any}()
-            ))
-        end
-    end
-
-    # Add material recommendations
-    if haskey(tissue_recs, :materials)
-        for rec in tissue_recs[:materials]
-            params = haskey(rec, :params) ? rec.params : Dict{String,Any}()
-            push!(recommendations, ScaffoldRecommendation(
-                :material,
-                rec.id,
-                rec.name,
-                rec.rationale,
-                rec.evidence,
-                rec.refs,
-                params
-            ))
-        end
-    end
-
-    # Add process recommendations
-    if haskey(tissue_recs, :processes)
-        for rec in tissue_recs[:processes]
-            push!(recommendations, ScaffoldRecommendation(
-                :process,
-                rec.id,
-                rec.name,
-                rec.rationale,
-                rec.evidence,
-                rec.refs,
-                Dict{String,Any}()
-            ))
-        end
-    end
-
-    # Add parameter recommendations
-    if haskey(tissue_recs, :parameters)
-        for rec in tissue_recs[:parameters]
-            push!(recommendations, ScaffoldRecommendation(
-                :parameter,
-                nothing,
-                rec.name,
-                rec.rationale,
-                :high,
-                rec.refs,
-                Dict{String,Any}("min" => rec.min, "optimal" => rec.optimal, "max" => rec.max)
-            ))
-        end
-    end
-
-    return recommendations
-end
-
-"""
-    get_cells_for_tissue(tissue_id::String) -> Vector{OBOTerm}
-
-Get recommended cell types for a target tissue.
-"""
-function get_cells_for_tissue(tissue_id::String)
-    recs = get_scaffold_recommendations(tissue_id)
-    cell_ids = [r.term_id for r in recs if r.category == :cell && !isnothing(r.term_id)]
-    return [t for t in [smart_lookup(id) for id in cell_ids] if !isnothing(t)]
-end
-
-"""
-    get_materials_for_application(tissue_id::String) -> Vector{OBOTerm}
-
-Get recommended materials for scaffold targeting specific tissue.
-"""
-function get_materials_for_application(tissue_id::String)
-    recs = get_scaffold_recommendations(tissue_id)
-    mat_ids = [r.term_id for r in recs if r.category == :material && !isnothing(r.term_id)]
-    return [t for t in [smart_lookup(id) for id in mat_ids] if !isnothing(t)]
-end
-
-"""
-    get_biological_processes(tissue_id::String) -> Vector{OBOTerm}
-
-Get relevant biological processes for tissue regeneration.
-"""
-function get_biological_processes(tissue_id::String)
-    recs = get_scaffold_recommendations(tissue_id)
-    proc_ids = [r.term_id for r in recs if r.category == :process && !isnothing(r.term_id)]
-    return [t for t in [smart_lookup(id) for id in proc_ids] if !isnothing(t)]
-end
-
-"""
-    recommend_pore_size(tissue_id::String) -> NamedTuple
-
-Get recommended pore size range for tissue type.
-
-# Returns
-NamedTuple with (min, optimal, max) in micrometers.
-"""
-function recommend_pore_size(tissue_id::String)
-    recs = get_scaffold_recommendations(tissue_id)
-
-    for rec in recs
-        if rec.category == :parameter && rec.name == "pore_size_um"
-            return (
-                min=rec.parameters["min"],
-                optimal=rec.parameters["optimal"],
-                max=rec.parameters["max"],
-                rationale=rec.rationale,
-                references=rec.references
-            )
-        end
-    end
-
-    # Default: general scaffold guidelines
-    return (min=50, optimal=150, max=300, rationale="General scaffold guidelines", references=String[])
-end
+# NOTE: SEMANTIC SIMILARITY moved to SemanticSimilarity.jl submodule
+# The following types and functions are re-exported from there:
+# - SemanticSimilarityMethod, WuPalmerSimilarity, ResnikSimilarity, LinSimilarity
+# - semantic_similarity, find_similar_terms, compute_ic
+# - get_depth, get_lowest_common_ancestor
+
+# Delegate to SemanticSimilarity submodule
+semantic_similarity(id1::String, id2::String; method=SemanticSimilarity.WuPalmerSimilarity()) =
+    SemanticSimilarity.semantic_similarity(id1, id2; method=method)
+find_similar_terms(id::String, candidates::Vector{String}; kwargs...) =
+    SemanticSimilarity.find_similar_terms(id, candidates; kwargs...)
+compute_ic(id::String) = SemanticSimilarity.compute_ic(id)
+
+# Re-export SemanticSimilarity types
+const SemanticSimilarityMethod = SemanticSimilarity.SemanticSimilarityMethod
+const WuPalmerSimilarity = SemanticSimilarity.WuPalmerSimilarity
+const ResnikSimilarity = SemanticSimilarity.ResnikSimilarity
+const LinSimilarity = SemanticSimilarity.LinSimilarity
+
+# NOTE: TISSUE-SPECIFIC RECOMMENDATIONS moved to ScaffoldRecommendations.jl submodule
+# The following types and functions are re-exported from there:
+# - ScaffoldRecommendation, TISSUE_RECOMMENDATIONS
+# - get_scaffold_recommendations, get_cells_for_tissue
+# - get_materials_for_application, get_biological_processes, recommend_pore_size
+
+# Delegate to submodule functions
+get_scaffold_recommendations(tissue_id::String) = ScaffoldRecommendations.get_scaffold_recommendations(tissue_id)
+get_cells_for_tissue(tissue_id::String) = ScaffoldRecommendations.get_cells_for_tissue(tissue_id)
+get_materials_for_application(tissue_id::String) = ScaffoldRecommendations.get_materials_for_application(tissue_id)
+get_biological_processes(tissue_id::String) = ScaffoldRecommendations.get_biological_processes(tissue_id)
+recommend_pore_size(tissue_id::String) = ScaffoldRecommendations.recommend_pore_size(tissue_id)
+
+# Re-export ScaffoldRecommendation type
+const ScaffoldRecommendation = ScaffoldRecommendations.ScaffoldRecommendation
 
 #=============================================================================
   BIOPORTAL API CLIENT
@@ -1843,289 +1335,50 @@ function export_graphml(root_id::String, filepath::String; kwargs...)
     export_graphml(nodes, edges, filepath)
 end
 
-#=============================================================================
-  ANNOTATION VALIDATION
+# NOTE: ANNOTATION VALIDATION moved to AnnotationValidation.jl submodule
+# The following functions are re-exported from that submodule:
+# - validate_annotation, AnnotationValidationResult
+# - check_tissue_cell_compatibility, check_material_application
+# - check_process_relevance, validate_parameters
 
-  Validate scaffold annotations for biological consistency:
-  - Cell-tissue compatibility
-  - Material-application suitability
-  - Process relevance
-  - Parameter ranges
+# Delegate to AnnotationValidation submodule
+validate_annotation(annotation::Dict) = AnnotationValidation.validate_annotation(annotation)
+check_tissue_cell_compatibility(tissue_id::String, cell_ids::Vector{String}) =
+    AnnotationValidation.check_tissue_cell_compatibility(tissue_id, cell_ids)
+check_material_application(tissue_id::String, material_ids::Vector{String}) =
+    AnnotationValidation.check_material_application(tissue_id, material_ids)
+
+# Re-export AnnotationValidation types
+const AnnotationValidationResult = AnnotationValidation.AnnotationValidationResult
+
+#=============================================================================
+  SUBMODULE CONFIGURATION
+
+  Configure the focused submodules with the necessary dependencies.
+  This allows the submodules to be independently testable while still
+  having access to OntologyManager's lookup and traversal functions.
 =============================================================================#
 
-"""
-    AnnotationValidationResult
+function _configure_submodules!()
+    # Configure SemanticSimilarity with graph traversal functions
+    SemanticSimilarity.configure!(get_ancestors, get_descendants)
 
-Result of validating a scaffold annotation.
-"""
-struct AnnotationValidationResult
-    is_valid::Bool
-    errors::Vector{String}
-    warnings::Vector{String}
-    suggestions::Vector{String}
-    compatibility_scores::Dict{String,Float64}
+    # Configure ScaffoldRecommendations with lookup and traversal
+    ScaffoldRecommendations.configure!(smart_lookup, get_ancestors)
+
+    # Configure AnnotationValidation with all necessary functions
+    AnnotationValidation.configure!(
+        smart_lookup=smart_lookup,
+        get_scaffold_recommendations=get_scaffold_recommendations,
+        get_cells_for_tissue=get_cells_for_tissue,
+        get_materials_for_application=get_materials_for_application,
+        get_biological_processes=get_biological_processes,
+        semantic_similarity=semantic_similarity,
+        wu_palmer_method=WuPalmerSimilarity()
+    )
 end
 
-"""
-    validate_annotation(annotation::Dict) -> AnnotationValidationResult
-
-Validate a scaffold annotation for biological consistency.
-
-# Checks performed:
-1. Cell-tissue compatibility (are these cells found in this tissue?)
-2. Material-application suitability (is this material appropriate?)
-3. Process relevance (are these processes related to the tissue?)
-4. Parameter ranges (are metrics within recommended ranges?)
-"""
-function validate_annotation(annotation::Dict)
-    errors = String[]
-    warnings = String[]
-    suggestions = String[]
-    scores = Dict{String,Float64}()
-
-    tissue_id = get(annotation, "tissue_id", nothing)
-    isnothing(tissue_id) && push!(errors, "Missing tissue specification")
-
-    # Get tissue term
-    tissue = !isnothing(tissue_id) ? smart_lookup(tissue_id) : nothing
-
-    # Validate cells
-    if haskey(annotation, "cells") && !isnothing(tissue)
-        cell_ids = annotation["cells"]
-        cell_score = check_tissue_cell_compatibility(tissue_id, cell_ids)
-        scores["cell_compatibility"] = cell_score
-
-        if cell_score < 0.3
-            push!(warnings, "Low cell-tissue compatibility score ($(round(cell_score, digits=2)))")
-
-            # Suggest better cells
-            recommended = get_cells_for_tissue(tissue_id)
-            if !isempty(recommended)
-                rec_names = join([c.name for c in recommended[1:min(3, length(recommended))]], ", ")
-                push!(suggestions, "Consider using: $(rec_names)")
-            end
-        end
-    end
-
-    # Validate materials
-    if haskey(annotation, "materials") && !isnothing(tissue)
-        mat_ids = annotation["materials"]
-        mat_score = check_material_application(tissue_id, mat_ids)
-        scores["material_suitability"] = mat_score
-
-        if mat_score < 0.3
-            push!(warnings, "Low material suitability score ($(round(mat_score, digits=2)))")
-
-            recommended = get_materials_for_application(tissue_id)
-            if !isempty(recommended)
-                rec_names = join([m.name for m in recommended[1:min(3, length(recommended))]], ", ")
-                push!(suggestions, "Consider using: $(rec_names)")
-            end
-        end
-    end
-
-    # Validate parameters
-    if haskey(annotation, "metrics") && !isnothing(tissue)
-        metrics = annotation["metrics"]
-        param_issues = validate_parameters(tissue_id, metrics)
-        append!(warnings, param_issues.warnings)
-        append!(suggestions, param_issues.suggestions)
-        scores["parameter_compliance"] = param_issues.score
-    end
-
-    # Check biological process relevance
-    if haskey(annotation, "processes") && !isnothing(tissue)
-        proc_ids = annotation["processes"]
-        proc_score = check_process_relevance(tissue_id, proc_ids)
-        scores["process_relevance"] = proc_score
-
-        if proc_score < 0.3
-            push!(warnings, "Selected processes may not be relevant to target tissue")
-        end
-    end
-
-    # Overall validity
-    is_valid = isempty(errors)
-
-    return AnnotationValidationResult(is_valid, errors, warnings, suggestions, scores)
-end
-
-"""
-    check_tissue_cell_compatibility(tissue_id::String, cell_ids::Vector{String}) -> Float64
-
-Check if cells are compatible with target tissue.
-Returns score 0-1 based on semantic similarity and known associations.
-"""
-function check_tissue_cell_compatibility(tissue_id::String, cell_ids::Vector{String})
-    isempty(cell_ids) && return 0.0
-
-    # Get recommended cells for this tissue
-    recommended = get_cells_for_tissue(tissue_id)
-    rec_ids = Set([c.id for c in recommended])
-
-    scores = Float64[]
-    for cell_id in cell_ids
-        if cell_id in rec_ids
-            # Exact match with recommendation
-            push!(scores, 1.0)
-        else
-            # Check semantic similarity to recommended cells
-            best_sim = 0.0
-            for rec_id in rec_ids
-                sim = semantic_similarity(cell_id, rec_id; method=WuPalmerSimilarity())
-                best_sim = max(best_sim, sim)
-            end
-            push!(scores, best_sim)
-        end
-    end
-
-    return mean(scores)
-end
-
-"""
-    check_material_application(tissue_id::String, material_ids::Vector{String}) -> Float64
-
-Check if materials are suitable for target application.
-"""
-function check_material_application(tissue_id::String, material_ids::Vector{String})
-    isempty(material_ids) && return 0.0
-
-    recommended = get_materials_for_application(tissue_id)
-    rec_ids = Set([m.id for m in recommended])
-
-    scores = Float64[]
-    for mat_id in material_ids
-        if mat_id in rec_ids
-            push!(scores, 1.0)
-        else
-            best_sim = 0.0
-            for rec_id in rec_ids
-                sim = semantic_similarity(mat_id, rec_id; method=WuPalmerSimilarity())
-                best_sim = max(best_sim, sim)
-            end
-            push!(scores, best_sim)
-        end
-    end
-
-    return mean(scores)
-end
-
-"""Check relevance of biological processes to tissue."""
-function check_process_relevance(tissue_id::String, process_ids::Vector{String})
-    isempty(process_ids) && return 0.0
-
-    recommended = get_biological_processes(tissue_id)
-    rec_ids = Set([p.id for p in recommended])
-
-    scores = Float64[]
-    for proc_id in process_ids
-        if proc_id in rec_ids
-            push!(scores, 1.0)
-        else
-            best_sim = 0.0
-            for rec_id in rec_ids
-                sim = semantic_similarity(proc_id, rec_id; method=WuPalmerSimilarity())
-                best_sim = max(best_sim, sim)
-            end
-            push!(scores, best_sim)
-        end
-    end
-
-    return mean(scores)
-end
-
-"""Validate scaffold parameters against tissue-specific recommendations."""
-function validate_parameters(tissue_id::String, metrics::Dict)
-    warnings = String[]
-    suggestions = String[]
-    score = 1.0
-
-    recs = get_scaffold_recommendations(tissue_id)
-    param_recs = Dict(r.name => r for r in recs if r.category == :parameter)
-
-    # Check pore size
-    if haskey(metrics, "pore_size_um") && haskey(param_recs, "pore_size_um")
-        rec = param_recs["pore_size_um"]
-        value = metrics["pore_size_um"]
-        min_val, max_val = rec.parameters["min"], rec.parameters["max"]
-        optimal = rec.parameters["optimal"]
-
-        if value < min_val
-            push!(warnings, "Pore size $(value)μm below recommended minimum $(min_val)μm")
-            score -= 0.2
-        elseif value > max_val
-            push!(warnings, "Pore size $(value)μm above recommended maximum $(max_val)μm")
-            score -= 0.2
-        end
-
-        push!(suggestions, "Optimal pore size for this tissue: $(optimal)μm")
-    end
-
-    # Check porosity
-    if haskey(metrics, "porosity") && haskey(param_recs, "porosity_percent")
-        rec = param_recs["porosity_percent"]
-        value = metrics["porosity"] * 100  # Convert to percent
-        min_val, max_val = rec.parameters["min"], rec.parameters["max"]
-
-        if value < min_val
-            push!(warnings, "Porosity $(round(value, digits=1))% below recommended $(min_val)%")
-            score -= 0.2
-        end
-    end
-
-    # Check elastic modulus
-    if haskey(metrics, "elastic_modulus_mpa") && haskey(param_recs, "elastic_modulus_mpa")
-        rec = param_recs["elastic_modulus_mpa"]
-        value = metrics["elastic_modulus_mpa"]
-        min_val, max_val = rec.parameters["min"], rec.parameters["max"]
-
-        if value < min_val || value > max_val
-            push!(warnings, "Elastic modulus $(value) MPa outside recommended range $(min_val)-$(max_val) MPa")
-            score -= 0.15
-        end
-    end
-
-    return (warnings=warnings, suggestions=suggestions, score=max(0.0, score))
-end
-
-"""Simple mean function."""
-function mean(x::Vector{Float64})
-    isempty(x) && return 0.0
-    return sum(x) / length(x)
-end
-
-"""Pretty print validation result."""
-function Base.show(io::IO, result::AnnotationValidationResult)
-    status = result.is_valid ? "VALID" : "INVALID"
-    println(io, "AnnotationValidationResult: $(status)")
-
-    if !isempty(result.errors)
-        println(io, "  Errors:")
-        for e in result.errors
-            println(io, "    - $(e)")
-        end
-    end
-
-    if !isempty(result.warnings)
-        println(io, "  Warnings:")
-        for w in result.warnings
-            println(io, "    - $(w)")
-        end
-    end
-
-    if !isempty(result.suggestions)
-        println(io, "  Suggestions:")
-        for s in result.suggestions
-            println(io, "    - $(s)")
-        end
-    end
-
-    if !isempty(result.compatibility_scores)
-        println(io, "  Scores:")
-        for (k, v) in result.compatibility_scores
-            println(io, "    $(k): $(round(v, digits=2))")
-        end
-    end
-end
+# Auto-configure submodules when module is loaded
+_configure_submodules!()
 
 end # module
