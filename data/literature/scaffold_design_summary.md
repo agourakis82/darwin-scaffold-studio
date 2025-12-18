@@ -1,6 +1,6 @@
 # Scaffold Design Summary - All Tissue Types
 
-**Version:** 3.2.0
+**Version:** 3.3.0
 
 **Generated:** 2025-12-18
 
@@ -83,6 +83,63 @@ All scaffolds meet literature-validated targets for:
 - Pore size
 - Mechanical modulus
 - Interconnectivity (>90%)
+
+## 3D Printing Feasibility
+
+### Printability by Method
+
+| Method | Tissues | Printable? | Notes |
+|--------|---------|------------|-------|
+| Bioprinting | Nerve, Cardiac, Liver, Cartilage, Skin | ✓ (with adaptation) | Hydrogels require geometry scaling |
+| FDM | Skeletal Muscle | ⚠ Needs work | ALG requires bioprinting |
+| FDM | Trabecular Bone | ✓ Use PLDLA | PLDLA alternative to ceramics |
+| Ceramic Extrusion | Cortical Bone, Tendon | ⚠ Special equipment | TCP requires sintering at 1100°C |
+
+### PLDLA for Bone Scaffolds
+
+**PLDLA (Poly-L-DL-lactide 70:30)** is a viable FDM-printable alternative for trabecular bone:
+
+| Property | Value | Target | Status |
+|----------|-------|--------|--------|
+| E_scaffold | 150 MPa | 100-500 MPa | ✓ |
+| Porosity | 78% | 50-90% | ✓ |
+| Pore size | 450 μm | 300-600 μm | ✓ |
+| Degradation | 24-52 wk | 12-24 wk healing | ✓ |
+| Print temp | 185°C | Standard FDM | ✓ |
+| FDA Approved | Yes | - | ✓ |
+
+**Advantages over ceramics:**
+- Standard FDM printer compatible (no special equipment)
+- No post-processing sintering required
+- Lower print temperature (185°C vs 1100°C)
+- FDA approved for medical devices
+
+### Printer Types Supported
+
+| Printer Type | Materials | Min Feature | Tissues |
+|--------------|-----------|-------------|---------|
+| Standard FDM | PCL, PLA, PLGA, PLDLA | 250 μm | Trabecular bone |
+| Pneumatic Bioprinter | ALG, COL1, GelMA, PEGDA | 150 μm | Soft tissues |
+| Ceramic Robocaster | TCP, HAp, BG45S5 | 300 μm | Cortical bone |
+
+### G-code Generation
+
+Automated G-code generation supports:
+- Woodpile (0/90°) architecture
+- Offset grid patterns
+- Honeycomb patterns
+- Print parameter optimization per material
+- Crosslinking pause integration (UV/ionic)
+
+## Changelog v3.3.0
+
+### New Features (3D Printing)
+- Added **3D printing module** with FDM and bioprinting support
+- Added **printer database** with specs for 5 printer types
+- Added **material print parameters** for 15+ materials
+- Added **PLDLA** as FDM-printable bone scaffold alternative
+- Added **printability validation** with automatic geometry adaptation
+- Added **G-code generation** with multiple scaffold architectures
 
 ## Changelog v3.2.0
 

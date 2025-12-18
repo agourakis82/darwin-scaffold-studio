@@ -177,6 +177,7 @@ const POLYMER_CANDIDATES = [
     PolymerCandidate("Poly(3-hydroxybutyrate)", "PHB", 3500.0, 40.0, (52.0, 156.0), :chain_end, 0.85, 2.0, false, "PMC4424662"),
     PolymerCandidate("Poly(propylene fumarate)", "PPF", 2000.0, 30.0, (26.0, 78.0), :random, 0.88, 3.0, false, "PMID:17961371"),
     PolymerCandidate("Polyurethane (degradable)", "PU", 50.0, 10.0, (26.0, 104.0), :random, 0.80, 2.5, false, "PMC5923535"),
+    PolymerCandidate("Poly(L-DL-lactide) 70:30", "PLDLA", 3200.0, 55.0, (24.0, 52.0), :chain_end, 0.94, 1.3, true, "PMC4082975"),
 
     # Hydrogels (for soft tissues: skin, nerve, cardiac, liver)
     # E values for hydrogels are much lower (kPa range, expressed as MPa)
