@@ -1,12 +1,12 @@
 module Percolation
 
-using ImageMorphology
-using ImageSegmentation
+using ImageMorphology: label_components, component_lengths, distance_transform, feature_transform
 using Statistics
 using LinearAlgebra
 using DataStructures # For queue in BFS
 
-export compute_percolation_metrics
+export compute_percolation_metrics, find_largest_cluster, compute_percolation_diameter,
+       compute_tortuosity, compute_geodesic_length
 
 # =============================================================================
 # Helper Functions
@@ -21,15 +21,39 @@ Find the largest connected pore cluster and check if it percolates (z=1 to z=end
 - Tuple of (cluster_mask, is_percolating)
 """
 function find_largest_cluster(volume::AbstractArray)::Tuple{BitArray{3}, Bool}
-    labeled = label_components(volume)
-    component_sizes = component_lengths(labeled)
-
-    if isempty(component_sizes) || length(component_sizes) < 2
+    # Check for empty volume first
+    if !any(volume)
         return (falses(size(volume)), false)
     end
 
-    # Find largest component (skip background at index 1)
-    largest_label = argmax(component_sizes[2:end]) + 1
+    labeled = label_components(volume)
+    component_sizes = component_lengths(labeled)
+
+    # component_lengths returns an OffsetArray with 0-based indexing
+    # component_sizes[0] is background, component_sizes[1], [2], ... are foreground labels
+    # Find the largest foreground component (labels >= 1)
+
+    # Get the range of foreground labels (1 to lastindex)
+    last_idx = lastindex(component_sizes)
+    if last_idx < 1
+        # No foreground components
+        return (falses(size(volume)), false)
+    end
+
+    # Find largest foreground component among labels 1:last_idx
+    largest_label = 1
+    largest_size = component_sizes[1]
+    for label in 2:last_idx
+        if component_sizes[label] > largest_size
+            largest_size = component_sizes[label]
+            largest_label = label
+        end
+    end
+
+    if largest_size == 0
+        return (falses(size(volume)), false)
+    end
+
     main_cluster = (labeled .== largest_label)
 
     # Check percolation (touches top and bottom Z)
