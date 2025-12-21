@@ -233,13 +233,9 @@ function train_multitask!(model::MultiTaskModel, X_train::AbstractMatrix,
                          y_train_dict::Dict{String, <:AbstractVector};
                          epochs::Int=100, lr::Float64=0.001, batch_size::Int=32)
     
-    # Collect all parameters
-    ps = Flux.params(model.encoder.network)
-    for head in values(model.task_heads)
-        ps = Flux.Params([ps..., Flux.params(head.network)...])
-    end
-    
-    opt = Adam(lr)
+    # Collect all networks for new Flux API
+    all_networks = (model.encoder.network, [head.network for head in values(model.task_heads)]...)
+    opt_state = Flux.setup(Adam(lr), all_networks)
     
     # Training history
     history = Dict{String, Vector{Float64}}()
@@ -276,13 +272,14 @@ function train_multitask!(model::MultiTaskModel, X_train::AbstractMatrix,
                 y_batch_dict[task_name] = y_full[batch_indices]
             end
             
-            # Compute gradient and update
-            gs = gradient(ps) do
-                loss, _ = multitask_loss(model, x_batch, y_batch_dict)
-                loss
+            # Compute gradient and update using new API
+            loss, grads = Flux.withgradient(all_networks) do nets...
+                # Temporarily reconstruct model
+                temp_model = model  # Use existing model structure
+                multitask_loss(temp_model, x_batch, y_batch_dict)[1]
             end
             
-            Flux.update!(opt, ps, gs)
+            Flux.update!(opt_state, all_networks, grads)
             
             # Track losses
             loss, task_losses = multitask_loss(model, x_batch, y_batch_dict)

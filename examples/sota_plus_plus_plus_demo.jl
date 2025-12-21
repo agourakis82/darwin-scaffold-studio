@@ -17,6 +17,11 @@ using DarwinScaffoldStudio
 using Statistics
 using Random
 
+# Import SOTA+++ modules
+using .DarwinScaffoldStudio: UncertaintyQuantification, MultiTaskLearning, 
+                             ScaffoldFoundationModel, GeometricLaplaceOperator,
+                             ActiveLearning, ExplainableAI
+
 println("="^80)
 println("Darwin Scaffold Studio v3.4.0 - SOTA+++ Demo")
 println("="^80)

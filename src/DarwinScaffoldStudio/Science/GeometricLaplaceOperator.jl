@@ -327,8 +327,8 @@ function train_glno!(glno::GeometricLaplaceNO, training_data::Vector,
                     L::SparseMatrixCSC, spectral_basis::AbstractMatrix;
                     epochs::Int=100, lr::Float64=0.001)
     
-    ps = Flux.params(glno.spectral_encoder, glno.kernel_network, glno.decoder)
-    opt = Adam(lr)
+    all_networks = (glno.spectral_encoder, glno.kernel_network, glno.decoder)
+    opt_state = Flux.setup(Adam(lr), all_networks)
     
     losses = Float64[]
     
@@ -344,13 +344,13 @@ function train_glno!(glno::GeometricLaplaceNO, training_data::Vector,
         epoch_loss = 0.0
         
         for (u0, u_target) in training_data
-            # Compute gradient
-            gs = gradient(ps) do
+            # Compute gradient using new API
+            loss, grads = Flux.withgradient(all_networks) do nets...
                 pde_loss(glno, u0, spectral_basis, u_target, L)
             end
             
-            Flux.update!(opt, ps, gs)
-            epoch_loss += pde_loss(glno, u0, spectral_basis, u_target, L)
+            Flux.update!(opt_state, all_networks, grads)
+            epoch_loss += loss
         end
         
         avg_loss = epoch_loss / length(training_data)

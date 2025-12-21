@@ -52,7 +52,7 @@ function compute_shap_values(model::Function, x::AbstractVector,
     n_background = size(X_background, 2)
     
     # Baseline prediction (average over background)
-    base_predictions = [model(X_background[:, i:i]) for i in 1:n_background]
+    base_predictions = [model(X_background[:, i:i])[1] for i in 1:n_background]
     base_value = mean(base_predictions)
     
     # Initialize SHAP values

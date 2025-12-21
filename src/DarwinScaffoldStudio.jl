@@ -415,6 +415,13 @@ export
     ScaffoldData,
     ToolResult,
     execute_tool,
-    run_agent
+    run_agent,
+    # SOTA+++ Modules (v3.4.0)
+    UncertaintyQuantification,
+    MultiTaskLearning,
+    ScaffoldFoundationModel,
+    GeometricLaplaceOperator,
+    ActiveLearning,
+    ExplainableAI
 
 end # module

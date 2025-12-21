@@ -21,8 +21,9 @@ using Distributions
 using LinearAlgebra
 
 export BayesianNN, ConformalPredictor, UncertaintyDecomposition
-export train_bayesian!, predict_with_uncertainty, calibrate_conformal
-export decompose_uncertainty, calibration_curve
+export train_bayesian!, predict_with_uncertainty, calibrate_conformal!
+export predict_conformal, decompose_uncertainty, calibration_curve
+export print_uncertainty_summary
 
 # ============================================================================
 # Bayesian Neural Network (Variational Inference)
@@ -135,9 +136,9 @@ Train Bayesian Neural Network using variational inference.
 function train_bayesian!(bnn::BayesianNN, X_train::AbstractMatrix, y_train::AbstractMatrix;
                         epochs::Int=100, lr::Float64=0.001)
     
-    # Combine parameters from both networks
-    ps = Flux.params(bnn.mean_net, bnn.logvar_net)
-    opt = Adam(lr)
+    # Use new Flux API - setup optimizer state
+    opt_state = Flux.setup(Adam(lr), bnn.mean_net)
+    opt_state_logvar = Flux.setup(Adam(lr), bnn.logvar_net)
     
     losses = Float64[]
     
@@ -147,26 +148,35 @@ function train_bayesian!(bnn::BayesianNN, X_train::AbstractMatrix, y_train::Abst
         # Mini-batch training
         n_samples = size(X_train, 2)
         batch_size = min(32, n_samples)
-        n_batches = div(n_samples, batch_size)
+        n_batches = max(1, div(n_samples, batch_size))
         
         for batch in 1:n_batches
-            idx = ((batch-1)*batch_size + 1):(batch*batch_size)
-            x_batch = X_train[:, idx]
-            y_batch = y_train[:, idx]
+            batch_start = (batch - 1) * batch_size + 1
+            batch_end = min(batch * batch_size, n_samples)
+            x_batch = X_train[:, batch_start:batch_end]
+            y_batch = y_train[:, batch_start:batch_end]
             
-            # Compute gradient and update
-            gs = gradient(ps) do
-                elbo_loss(bnn, x_batch, y_batch)
+            # Compute gradient and update using new API
+            loss, grads = Flux.withgradient(bnn.mean_net) do m
+                elbo_loss(BayesianNN(m, bnn.logvar_net, bnn.prior_σ, bnn.n_samples), x_batch, y_batch)
             end
             
-            Flux.update!(opt, ps, gs)
-            loss_val += elbo_loss(bnn, x_batch, y_batch)
+            Flux.update!(opt_state, bnn.mean_net, grads[1])
+            
+            # Update logvar network
+            loss_lv, grads_lv = Flux.withgradient(bnn.logvar_net) do lv
+                elbo_loss(BayesianNN(bnn.mean_net, lv, bnn.prior_σ, bnn.n_samples), x_batch, y_batch)
+            end
+            
+            Flux.update!(opt_state_logvar, bnn.logvar_net, grads_lv[1])
+            
+            loss_val += loss
         end
         
         push!(losses, loss_val / n_batches)
         
         if epoch % 10 == 0
-            println("Epoch $epoch: Loss = $(losses[end])")
+            println("Epoch $epoch: Loss = $(round(losses[end], digits=4))")
         end
     end
     
